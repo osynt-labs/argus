@@ -1,25 +1,17 @@
-# Stage 1: deps
-FROM node:20-alpine AS deps
+# Stage 1: builder (needs ALL deps including dev for build)
+FROM node:20-alpine AS builder
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev --ignore-scripts
-
-# Stage 2: builder
-FROM node:20-alpine AS builder
-RUN apk add --no-cache libc6-compat openssl
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
 # Placeholder — Prisma config reads DATABASE_URL but no DB is needed at build time
 ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost/placeholder"
-# Generate Prisma client
-RUN npx prisma generate
+RUN npm ci
+COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-# Stage 3: runner
+# Stage 2: runner
 FROM node:20-alpine AS runner
 RUN apk add --no-cache openssl
 WORKDIR /app
