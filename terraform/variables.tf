@@ -70,3 +70,9 @@ variable "memory_limit" {
   type    = string
   default = "512Mi"
 }
+
+variable "domain" {
+  description = "Public domain for Argus (e.g. argus.osynt.ai)"
+  type        = string
+  default     = "argus.osynt.ai"
+}
