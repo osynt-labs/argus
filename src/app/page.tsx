@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { prisma } from "@/lib/prisma";
 import { LiveFeed } from "@/components/LiveFeed";
 import { StatsCards } from "@/components/StatsCards";
