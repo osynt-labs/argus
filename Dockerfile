@@ -4,7 +4,7 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 
 # Stage 2: builder
 FROM node:20-alpine AS builder
