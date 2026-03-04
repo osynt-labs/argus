@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Session {
+  id          String   @id
+  key         String?  @unique
+  agentId     String?
+  label       String?
+  model       String?
+  startedAt   DateTime
+  lastSeenAt  DateTime @updatedAt
+  totalEvents Int      @default(0)
+  totalTokens Int      @default(0)
+  totalErrors Int      @default(0)
+  metadata    Json?
+  events      Event[]
+
+  @@map("sessions")
+}
+
+model Event {
+  id           String    @id @default(uuid())
+  sessionId    String
+  session      Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  timestamp    DateTime
+  type         EventType
+  toolName     String?
+  subAgentId   String?
+  cronJobId    String?
+  input        Json?
+  output       Json?
+  durationMs   Int?
+  model        String?
+  inputTokens  Int?
+  outputTokens Int?
+  cacheTokens  Int?
+  error        String?
+  status       String?   @default("ok")  // ok | error | timeout
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+
+  @@index([sessionId])
+  @@index([timestamp])
+  @@index([type])
+  @@index([toolName])
+  @@map("events")
+}
+
+enum EventType {
+  TOOL_CALL
+  MESSAGE_SEND
+  AGENT_SPAWN
+  CRON_RUN
+  ERROR
+  SESSION_START
+  SESSION_END
+  MODEL_SWITCH
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  name      String
+  keyHash   String   @unique
+  lastUsed  DateTime?
+  createdAt DateTime @default(now())
+  active    Boolean  @default(true)
+
+  @@map("api_keys")
+}
