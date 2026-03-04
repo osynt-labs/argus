@@ -7,6 +7,10 @@ resource "google_iam_workload_identity_pool" "argus_github_pool" {
   project                   = var.gcp_project
   workload_identity_pool_id = "argus-github-pool"
   display_name              = "Argus GitHub Actions Pool"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "google_iam_workload_identity_pool_provider" "argus_github_provider" {
@@ -39,13 +43,9 @@ resource "google_service_account" "argus_github_ci" {
 locals {
   ci_roles = [
     "roles/container.developer",
-    "roles/container.admin",
     "roles/storage.admin",
     "roles/secretmanager.secretAccessor",
     "roles/secretmanager.viewer",
-    "roles/cloudsql.admin",
-    "roles/iam.serviceAccountAdmin",
-    "roles/resourcemanager.projectIamAdmin",
   ]
 }
 

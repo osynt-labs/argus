@@ -1,2 +1,18 @@
-gcp_project_id = "chrome-encoder-462319-f6"
+gcp_project    = "chrome-encoder-462319-f6"
 gcp_region     = "europe-west3"
+
+gke_cluster_name = "main"
+gke_location     = "europe-west3-a"
+
+namespace = "argus"
+app_name  = "argus"
+
+image     = "gcr.io/chrome-encoder-462319-f6/argus"
+image_tag = "latest"
+
+app_port = 3000
+
+cpu_request    = "100m"
+memory_request = "256Mi"
+cpu_limit      = "500m"
+memory_limit   = "512Mi"

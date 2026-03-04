@@ -7,7 +7,7 @@
 #   gcloud secrets create argus-nextauth-secret --replication-policy=automatic
 #   gcloud secrets create argus-setup-secret    --replication-policy=automatic
 #
-#   gcloud secrets versions add argus-username        --data-file=<(echo -n "itay")
+#   gcloud secrets versions add argus-username        --data-file=<(echo -n "YOUR_USERNAME")
 #   gcloud secrets versions add argus-password        --data-file=<(echo -n "YOUR_STRONG_PASSWORD")
 #   gcloud secrets versions add argus-nextauth-secret --data-file=<(openssl rand -hex 32)
 #   gcloud secrets versions add argus-setup-secret    --data-file=<(openssl rand -hex 32)
@@ -17,7 +17,9 @@
 resource "google_secret_manager_secret" "db_password" {
   project   = var.gcp_project
   secret_id = "argus-db-password"
-  replication { auto {} }
+  replication {
+    auto {}
+  }
 }
 
 resource "google_secret_manager_secret_version" "db_password" {

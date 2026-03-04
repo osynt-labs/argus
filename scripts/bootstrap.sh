@@ -46,9 +46,12 @@ fi
 
 # ── 3. Login credentials ─────────────────────────────────────────
 section "Dashboard Credentials"
-prompt "Enter username (default: itay):"
+prompt "Enter username (required):"
 read -r ARGUS_USERNAME
-ARGUS_USERNAME="${ARGUS_USERNAME:-itay}"
+if [[ -z "$ARGUS_USERNAME" ]]; then
+  echo -e "${RED}[x]${NC} Username is required. Aborting."
+  exit 1
+fi
 
 prompt "Enter password (leave empty to auto-generate):"
 read -r -s ARGUS_PASSWORD

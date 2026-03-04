@@ -18,7 +18,7 @@ async function getStats() {
       prisma.event.groupBy({
         by: ["toolName"],
         where: { toolName: { not: null }, timestamp: { gte: h24 } },
-        _count: true,
+        _count: { toolName: true },
         orderBy: { _count: { toolName: "desc" } },
         take: 8,
       }),

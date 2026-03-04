@@ -1,6 +1,17 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(
+      `Missing required environment variable ${name}. ` +
+        `Set it in .env (local) or via Secret Manager (production).`
+    );
+  }
+  return value;
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
@@ -9,16 +20,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const validUser = process.env.ARGUS_USERNAME ?? "itay";
-        const validPass = process.env.ARGUS_PASSWORD;
+        const validUser = requireEnv("ARGUS_USERNAME");
+        const validPass = requireEnv("ARGUS_PASSWORD");
 
-        if (!validPass) throw new Error("ARGUS_PASSWORD not set");
+        const username = credentials?.username as string | undefined;
+        const password = credentials?.password as string | undefined;
 
-        if (
-          credentials?.username === validUser &&
-          credentials?.password === validPass
-        ) {
-          return { id: "1", name: validUser, email: `${validUser}@osynt.ai` };
+        const usernameMatch =
+          username !== undefined &&
+          username.length > 0 &&
+          username === validUser;
+        const passwordMatch =
+          password !== undefined &&
+          password.length > 0 &&
+          password === validPass;
+
+        if (usernameMatch && passwordMatch) {
+          return { id: "1", name: validUser };
         }
         return null;
       },

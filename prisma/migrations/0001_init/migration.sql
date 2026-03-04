@@ -1,6 +1,4 @@
--- Reference migration (actual migration runs via `prisma migrate dev`)
--- This is for documentation purposes only
-
+-- CreateEnum
 CREATE TYPE "EventType" AS ENUM (
   'TOOL_CALL',
   'MESSAGE_SEND',
@@ -12,6 +10,7 @@ CREATE TYPE "EventType" AS ENUM (
   'MODEL_SWITCH'
 );
 
+-- CreateTable
 CREATE TABLE "sessions" (
   "id" TEXT NOT NULL,
   "key" TEXT,
@@ -27,8 +26,10 @@ CREATE TABLE "sessions" (
   CONSTRAINT "sessions_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateIndex
 CREATE UNIQUE INDEX "sessions_key_key" ON "sessions"("key");
 
+-- CreateTable
 CREATE TABLE "events" (
   "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
   "sessionId" TEXT NOT NULL,
@@ -51,14 +52,23 @@ CREATE TABLE "events" (
   CONSTRAINT "events_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateIndex
 CREATE INDEX "events_sessionId_idx" ON "events"("sessionId");
+
+-- CreateIndex
 CREATE INDEX "events_timestamp_idx" ON "events"("timestamp");
+
+-- CreateIndex
 CREATE INDEX "events_type_idx" ON "events"("type");
+
+-- CreateIndex
 CREATE INDEX "events_toolName_idx" ON "events"("toolName");
 
+-- AddForeignKey
 ALTER TABLE "events" ADD CONSTRAINT "events_sessionId_fkey"
   FOREIGN KEY ("sessionId") REFERENCES "sessions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+-- CreateTable
 CREATE TABLE "api_keys" (
   "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
   "name" TEXT NOT NULL,
@@ -69,4 +79,5 @@ CREATE TABLE "api_keys" (
   CONSTRAINT "api_keys_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateIndex
 CREATE UNIQUE INDEX "api_keys_keyHash_key" ON "api_keys"("keyHash");
