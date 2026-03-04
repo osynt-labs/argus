@@ -44,23 +44,21 @@ else
   info "Created bucket gs://${BUCKET}"
 fi
 
-# ── 3. Google OAuth credentials ──────────────────────────────────
-section "Google OAuth Setup"
-warn "You need to create OAuth credentials manually in the GCP Console."
+# ── 3. Login credentials ─────────────────────────────────────────
+section "Dashboard Credentials"
+prompt "Enter username (default: itay):"
+read -r ARGUS_USERNAME
+ARGUS_USERNAME="${ARGUS_USERNAME:-itay}"
+
+prompt "Enter password (leave empty to auto-generate):"
+read -r -s ARGUS_PASSWORD
 echo ""
-echo "  1. Go to: https://console.cloud.google.com/apis/credentials?project=${PROJECT}"
-echo "  2. Click: + CREATE CREDENTIALS → OAuth 2.0 Client ID"
-echo "  3. Application type: Web application"
-echo "  4. Name: Argus"
-echo "  5. Authorized redirect URIs:"
-echo "       https://argus.osynt.ai/api/auth/callback/google"
-echo "  6. Copy the Client ID and Client Secret"
-echo ""
-prompt "Enter Google OAuth Client ID:"
-read -r GOOGLE_CLIENT_ID
-prompt "Enter Google OAuth Client Secret:"
-read -r -s GOOGLE_CLIENT_SECRET
-echo ""
+if [[ -z "$ARGUS_PASSWORD" ]]; then
+  ARGUS_PASSWORD="$(openssl rand -base64 16)"
+  info "Generated password: ${ARGUS_PASSWORD}"
+  warn "Save this password — it won't be shown again!"
+  echo ""
+fi
 
 # ── 4. Create Secret Manager secrets ────────────────────────────
 section "Creating GCP Secrets"
@@ -81,10 +79,10 @@ create_or_update_secret() {
   fi
 }
 
-create_or_update_secret "argus-google-client-id"     "$GOOGLE_CLIENT_ID"
-create_or_update_secret "argus-google-client-secret" "$GOOGLE_CLIENT_SECRET"
-create_or_update_secret "argus-nextauth-secret"      "$(openssl rand -hex 32)"
-create_or_update_secret "argus-setup-secret"         "$(openssl rand -hex 32)"
+create_or_update_secret "argus-username"        "$ARGUS_USERNAME"
+create_or_update_secret "argus-password"        "$ARGUS_PASSWORD"
+create_or_update_secret "argus-nextauth-secret" "$(openssl rand -hex 32)"
+create_or_update_secret "argus-setup-secret"    "$(openssl rand -hex 32)"
 
 info "All 4 secrets created in Secret Manager"
 

@@ -1,30 +1,32 @@
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
-
-// Only this email can access the dashboard
-const ALLOWED_EMAIL = process.env.ALLOWED_EMAIL ?? "itay.van.dar@gmail.com";
+import Credentials from "next-auth/providers/credentials";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    Credentials({
+      credentials: {
+        username: { label: "Username", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const validUser = process.env.ARGUS_USERNAME ?? "itay";
+        const validPass = process.env.ARGUS_PASSWORD;
+
+        if (!validPass) throw new Error("ARGUS_PASSWORD not set");
+
+        if (
+          credentials?.username === validUser &&
+          credentials?.password === validPass
+        ) {
+          return { id: "1", name: validUser, email: `${validUser}@osynt.ai` };
+        }
+        return null;
+      },
     }),
   ],
-  callbacks: {
-    async signIn({ user }) {
-      // Whitelist check — only Itay gets in
-      if (user.email !== ALLOWED_EMAIL) {
-        return false;
-      }
-      return true;
-    },
-    async session({ session, token }) {
-      return session;
-    },
-  },
   pages: {
     signIn: "/login",
     error: "/login",
   },
+  session: { strategy: "jwt" },
 });
