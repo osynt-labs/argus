@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argus
+  namespace: argus
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # Uncomment for TLS (cert-manager):
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  rules:
+    - host: argus.osynt.ai
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argus
+                port:
+                  number: 80
+  # tls:
+  #   - hosts:
+  #       - argus.osynt.ai
+  #     secretName: argus-tls

@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus
+  namespace: argus
+  labels:
+    app: argus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argus
+  template:
+    metadata:
+      labels:
+        app: argus
+    spec:
+      serviceAccountName: argus
+
+      containers:
+        # ── Main app ──────────────────────────────────────────
+        - name: argus
+          image: europe-west3-docker.pkg.dev/chrome-encoder-462319-f6/argus/argus:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: argus-secrets
+                  key: database-url
+            - name: SETUP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: argus-secrets
+                  key: setup-secret
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+        # ── Cloud SQL Auth Proxy sidecar ──────────────────────
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14
+          args:
+            - "--port=5432"
+            - "chrome-encoder-462319-f6:europe-west3:argus-db"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            runAsNonRoot: true

@@ -1,89 +1,83 @@
 # 👁 Argus — AI Agent Observatory
 
-Full observability dashboard for OpenClaw AI agent activity. See every tool call, session, token usage, and error in real-time.
-
-## Features
-
-- **Live Feed** — SSE-powered real-time stream of every tool call
-- **Stats** — Total events, error rate, token usage, avg latency
-- **Tool Breakdown** — Bar chart of most-used tools (24h)
-- **Active Sessions** — Sessions active in the last hour
-- **Ingest API** — Secured with API key, accepts batch payloads
+Real-time observability dashboard for OpenClaw AI agent activity.
+Every tool call, session, token, and error — visible in one place.
 
 ## Stack
 
-- Next.js 15 (App Router, RSC)
-- PostgreSQL via Neon + Prisma ORM
-- Server-Sent Events for real-time
-- Recharts for visualization
-- Deployed on Vercel
+- **App**: Next.js 15 (App Router, RSC, standalone build)
+- **DB**: GCP Cloud SQL PostgreSQL 15 (db-f1-micro, ~$9/mo)
+- **Deploy**: GKE (existing cluster) + Cloud SQL Auth Proxy sidecar
+- **CI/CD**: GitHub Actions → Artifact Registry → GKE rolling deploy
+- **IaC**: Terraform
 
-## Setup
+## Architecture
 
-### 1. Create Neon database
-
-[Create a free Neon project](https://neon.tech) → copy connection strings.
-
-### 2. Environment variables
-
-```bash
-cp .env.example .env.local
-# Fill in DATABASE_URL, DATABASE_URL_UNPOOLED, SETUP_SECRET
+```
+OpenClaw → POST /api/ingest → Argus App (GKE pod) → Cloud SQL
+              (API key auth)      ↕ SSE /api/live
+                              Browser Dashboard
 ```
 
-### 3. Run migrations
+## Infrastructure Setup
 
+### 1. Terraform apply
 ```bash
-npx prisma migrate dev --name init
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+terraform init
+terraform apply
 ```
 
-### 4. Create first API key
-
+### 2. Create K8s secret
 ```bash
-curl -X POST https://your-app.vercel.app/api/setup \
+# Get DB password from terraform output
+DB_PASS=$(terraform output -raw db_password)
+DB_CONN=$(terraform output -raw db_connection_string)
+
+kubectl create namespace argus
+kubectl create secret generic argus-secrets -n argus \
+  --from-literal=database-url="$DB_CONN" \
+  --from-literal=setup-secret="$(openssl rand -hex 32)"
+```
+
+### 3. Run DB migration
+```bash
+# Port-forward to Cloud SQL proxy (or use Cloud Shell)
+DATABASE_URL="$DB_CONN" npx prisma migrate deploy
+```
+
+### 4. Deploy K8s manifests
+```bash
+kubectl apply -f k8s/
+```
+
+### 5. Create first API key
+```bash
+curl -X POST https://argus.osynt.ai/api/setup \
   -H "x-setup-secret: YOUR_SETUP_SECRET" \
-  -H "Content-Type: application/json" \
   -d '{"name": "openclaw"}'
+# → {"key": "argus_xxxx..."}  — store this!
 ```
 
-### 5. Configure OpenClaw hook
-
-In `openclaw.json`:
-
+### 6. Configure OpenClaw hook
+In `openclaw.json`, add under `hooks`:
 ```json
 {
   "hooks": {
     "onToolCall": {
       "url": "https://argus.osynt.ai/api/ingest",
-      "headers": { "Authorization": "Bearer YOUR_API_KEY" }
+      "headers": { "Authorization": "Bearer argus_xxxx..." }
     }
   }
 }
 ```
 
-## Ingest API
+## Local Development
 
-**POST /api/ingest**
-
-Headers: `Authorization: Bearer <key>` or `X-API-Key: <key>`
-
-Body (single or array):
-
-```json
-{
-  "session_id": "abc123",
-  "session_key": "agent:main:abc123",
-  "model": "anthropic/claude-sonnet-4-6",
-  "timestamp": "2026-03-04T10:00:00Z",
-  "type": "tool_call",
-  "tool_name": "exec",
-  "duration_ms": 1234,
-  "input_tokens": 500,
-  "output_tokens": 150,
-  "status": "ok"
-}
+```bash
+cp .env.example .env.local
+# Fill in DATABASE_URL
+npx prisma migrate dev
+npm run dev
 ```
-
-## Infrastructure
-
-See `terraform/` for Vercel deployment config.

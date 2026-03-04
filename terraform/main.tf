@@ -4,10 +4,6 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 5.0"
     }
-    vercel = {
-      source  = "vercel/vercel"
-      version = "~> 1.0"
-    }
     random = {
       source  = "hashicorp/random"
       version = "~> 3.0"
@@ -20,14 +16,15 @@ provider "google" {
   region  = var.gcp_region
 }
 
-provider "vercel" {
-  api_token = var.vercel_token
+# ─── Artifact Registry ───────────────────────────────────────────
+resource "google_artifact_registry_repository" "argus" {
+  location      = var.gcp_region
+  repository_id = "argus"
+  format        = "DOCKER"
+  description   = "Argus observability dashboard"
 }
 
-# ─────────────────────────────────────────
-# Cloud SQL — PostgreSQL 15
-# ─────────────────────────────────────────
-
+# ─── Cloud SQL ───────────────────────────────────────────────────
 resource "random_password" "db_password" {
   length  = 32
   special = false
@@ -39,39 +36,24 @@ resource "google_sql_database_instance" "argus" {
   region           = var.gcp_region
 
   settings {
-    tier              = "db-f1-micro"   # cheapest — $7/mo, fine for observability
+    tier              = "db-f1-micro"
     availability_type = "ZONAL"
     disk_size         = 10
     disk_autoresize   = true
 
     database_flags {
       name  = "max_connections"
-      value = "100"
+      value = "50"
     }
 
     backup_configuration {
-      enabled                        = true
-      start_time                     = "03:00"
-      transaction_log_retention_days = 3
-      backup_retention_settings {
-        retained_backups = 3
-      }
+      enabled    = true
+      start_time = "03:00"
     }
 
     ip_configuration {
-      ipv4_enabled = true
-      # Allow Vercel egress IPs (static list as of 2025 — update if needed)
-      # Or restrict further: use Cloud SQL Auth Proxy + service account
-      authorized_networks {
-        name  = "vercel-egress"
-        value = "0.0.0.0/0"  # TODO: restrict to Vercel IP ranges in production
-      }
-    }
-
-    insights_config {
-      query_insights_enabled  = true
-      query_string_length     = 1024
-      record_application_tags = true
+      ipv4_enabled    = false   # private only — no public IP
+      private_network = "projects/${var.gcp_project_id}/global/networks/default"
     }
   }
 
@@ -89,62 +71,51 @@ resource "google_sql_user" "argus" {
   password = random_password.db_password.result
 }
 
-# ─────────────────────────────────────────
-# Vercel Project
-# ─────────────────────────────────────────
-
-resource "vercel_project" "argus" {
-  name      = "argus"
-  framework = "nextjs"
-
-  git_repository = {
-    type = "github"
-    repo = "osynt-labs/argus"
-  }
+# ─── GCP Service Account for the app ────────────────────────────
+resource "google_service_account" "argus_app" {
+  account_id   = "argus-app"
+  display_name = "Argus App — Cloud SQL client"
 }
 
-locals {
-  db_host = google_sql_database_instance.argus.public_ip_address
-  db_url  = "postgresql://argus:${random_password.db_password.result}@${local.db_host}/argus?sslmode=require"
+resource "google_project_iam_member" "argus_cloudsql_client" {
+  project = var.gcp_project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.argus_app.email}"
 }
 
-resource "vercel_project_environment_variable" "database_url" {
-  project_id = vercel_project.argus.id
-  key        = "DATABASE_URL"
-  value      = local.db_url
-  target     = ["production", "preview"]
-  sensitive  = true
+# Workload Identity: K8s SA → GCP SA
+resource "google_service_account_iam_binding" "argus_workload_identity" {
+  service_account_id = google_service_account.argus_app.name
+  role               = "roles/iam.workloadIdentityUser"
+  members = [
+    "serviceAccount:${var.gcp_project_id}.svc.id.goog[argus/argus]"
+  ]
 }
 
-resource "vercel_project_environment_variable" "setup_secret" {
-  project_id = vercel_project.argus.id
-  key        = "SETUP_SECRET"
-  value      = var.setup_secret
-  target     = ["production", "preview"]
-  sensitive  = true
-}
-
-# ─────────────────────────────────────────
-# Outputs
-# ─────────────────────────────────────────
-
-output "db_instance_name" {
-  value = google_sql_database_instance.argus.name
-}
-
-output "db_public_ip" {
-  value = google_sql_database_instance.argus.public_ip_address
-}
-
-output "db_connection_name" {
+# ─── Outputs ─────────────────────────────────────────────────────
+output "db_instance_connection_name" {
   value = google_sql_database_instance.argus.connection_name
 }
 
-output "vercel_url" {
-  value = "https://argus-osynt.vercel.app"
+output "db_private_ip" {
+  value = google_sql_database_instance.argus.private_ip_address
+}
+
+output "artifact_registry_url" {
+  value = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/argus/argus"
+}
+
+output "gcp_sa_email" {
+  value = google_service_account.argus_app.email
 }
 
 output "db_password" {
   value     = random_password.db_password.result
   sensitive = true
+}
+
+output "db_connection_string" {
+  value       = "postgresql://argus:${random_password.db_password.result}@127.0.0.1:5432/argus"
+  sensitive   = true
+  description = "Use this in K8s secret — connects via Cloud SQL Auth Proxy sidecar on localhost:5432"
 }

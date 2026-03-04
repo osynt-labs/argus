@@ -1,5 +1,2 @@
-# Copy to terraform.tfvars — never commit the actual file!
 gcp_project_id = "chrome-encoder-462319-f6"
 gcp_region     = "europe-west3"
-vercel_token   = "your_vercel_api_token"
-setup_secret   = "generate_with: openssl rand -hex 32"
