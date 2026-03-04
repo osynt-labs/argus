@@ -2,25 +2,17 @@
 
 :root {
   color-scheme: dark;
+  --bg: #0a0a0f;
+  --card: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.07);
 }
 
-body {
-  background: #0a0a0f;
-  color: white;
-}
+html, body { background: var(--bg); color: white; height: 100%; }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+/* Mobile tap highlight */
+* { -webkit-tap-highlight-color: transparent; }
