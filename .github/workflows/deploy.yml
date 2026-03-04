@@ -1,0 +1,72 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  GCP_PROJECT: chrome-encoder-462319-f6
+  GCP_REGION: europe-west3
+  GKE_CLUSTER: main
+  GKE_LOCATION: europe-west3-a
+  IMAGE: gcr.io/chrome-encoder-462319-f6/argus
+  TF_DIR: terraform
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: gke-gcloud-auth-plugin
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker --quiet
+
+      - name: Build Docker image
+        run: docker build -t ${{ env.IMAGE }}:${{ github.sha }} .
+
+      - name: Push Docker image
+        run: docker push ${{ env.IMAGE }}:${{ github.sha }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.5"
+
+      - name: Get GKE credentials
+        run: gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} --zone ${{ env.GKE_LOCATION }} --project ${{ env.GCP_PROJECT }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.GCP_PROJECT }}-openclaw-terraform-state" \
+            -backend-config="prefix=argus"
+
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform plan -var="image_tag=${{ github.sha }}" -out=plan.out
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -auto-approve plan.out
+
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/argus -n argus --timeout=300s
