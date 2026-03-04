@@ -12,10 +12,10 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Placeholder — Prisma config reads DATABASE_URL but no DB is needed at build time
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost/placeholder"
 # Generate Prisma client
 RUN npx prisma generate
-# Build Next.js (no DB needed at build time)
-ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost/placeholder"
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
