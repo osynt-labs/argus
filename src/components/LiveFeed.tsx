@@ -15,6 +15,8 @@ interface Event {
   inputTokens?: number | null;
   outputTokens?: number | null;
   model?: string | null;
+  input?: unknown;
+  output?: unknown;
 }
 
 const TOOL_ICONS: Record<string, string> = {
@@ -34,6 +36,76 @@ const TYPE_BADGE: Record<string, string> = {
   SESSION_END:   "bg-gray-500/15   text-gray-400   border-gray-500/20",
 };
 
+const TRUNCATE_LIMIT = 500;
+
+function JsonBlock({ data, label }: { data: unknown; label: string }) {
+  const [expanded, setExpanded] = useState(false);
+  if (data == null) return null;
+
+  const raw = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+  const needsTruncation = raw.length > TRUNCATE_LIMIT;
+  const displayed = !expanded && needsTruncation ? raw.slice(0, TRUNCATE_LIMIT) + "…" : raw;
+
+  return (
+    <div className="mt-2">
+      <div className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-1">
+        {label}
+      </div>
+      <pre className="text-[11px] text-gray-300 bg-black/40 rounded-md p-2.5 overflow-x-auto whitespace-pre-wrap break-all font-mono leading-relaxed border border-white/5">
+        {displayed}
+      </pre>
+      {needsTruncation && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+          className="mt-1 text-[10px] text-blue-400 hover:text-blue-300 transition-colors"
+        >
+          {expanded ? "▲ Show less" : "▼ Show more"} ({raw.length.toLocaleString()} chars)
+        </button>
+      )}
+    </div>
+  );
+}
+
+function EventDetail({ event }: { event: Event }) {
+  return (
+    <div
+      className="px-3 py-3 bg-white/[0.02] border-b border-white/[0.03] ml-10"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-white/30 font-mono mb-2">
+        <span>
+          <span className="text-white/15">Session </span>
+          {event.sessionId}
+        </span>
+        <span>
+          <span className="text-white/15">Time </span>
+          {new Date(event.timestamp).toISOString()}
+        </span>
+        {event.durationMs != null && (
+          <span>
+            <span className="text-white/15">Duration </span>
+            {event.durationMs}ms
+          </span>
+        )}
+      </div>
+
+      <JsonBlock data={event.input} label="Input (params)" />
+      <JsonBlock data={event.output} label="Output (result)" />
+
+      {event.error && (
+        <div className="mt-2">
+          <div className="text-[10px] font-semibold text-red-400/60 uppercase tracking-wider mb-1">
+            Error
+          </div>
+          <pre className="text-[11px] text-red-300 bg-red-500/5 rounded-md p-2.5 overflow-x-auto whitespace-pre-wrap break-all font-mono border border-red-500/10">
+            {event.error}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function LiveFeed({
   initialEvents = [],
   onConnectionChange,
@@ -45,6 +117,7 @@ export function LiveFeed({
   const [connected, setConnected] = useState(false);
   const [filter, setFilter] = useState<string>("all");
   const [newCount, setNewCount] = useState(0);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
   const setConn = useCallback((v: boolean) => {
@@ -112,57 +185,70 @@ export function LiveFeed({
         )}
 
         {filtered.map((ev) => (
-          <div
-            key={ev.id}
-            className={`flex items-start gap-3 px-3 py-2.5 border-b border-white/[0.03] active:bg-white/3 transition-colors ${
-              ev.status === "error" || ev.error
-                ? "border-l-2 border-l-red-500/60 bg-red-500/3"
-                : ""
-            }`}
-          >
-            {/* Tool icon */}
-            <span className="text-lg shrink-0 w-7 text-center mt-0.5">
-              {TOOL_ICONS[ev.toolName ?? ""] ??
-                (ev.type === "AGENT_SPAWN" ? "🤖" :
-                 ev.type === "CRON_RUN"    ? "⏰" :
-                 ev.type === "SESSION_START" ? "▶️" : "📌")}
-            </span>
+          <div key={ev.id}>
+            <div
+              onClick={() => setExpandedId(expandedId === ev.id ? null : ev.id)}
+              className={`flex items-start gap-3 px-3 py-2.5 border-b border-white/[0.03] transition-colors cursor-pointer hover:bg-white/[0.03] ${
+                expandedId === ev.id ? "bg-white/[0.04]" : ""
+              } ${
+                ev.status === "error" || ev.error
+                  ? "border-l-2 border-l-red-500/60 bg-red-500/3"
+                  : ""
+              }`}
+            >
+              {/* Tool icon */}
+              <span className="text-lg shrink-0 w-7 text-center mt-0.5">
+                {TOOL_ICONS[ev.toolName ?? ""] ??
+                  (ev.type === "AGENT_SPAWN" ? "🤖" :
+                   ev.type === "CRON_RUN"    ? "⏰" :
+                   ev.type === "SESSION_START" ? "▶️" : "📌")}
+              </span>
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-semibold border ${TYPE_BADGE[ev.type] ?? "bg-white/5 text-white/30 border-white/5"}`}>
-                  {ev.type.replace("_", " ")}
-                </span>
-                {ev.toolName && (
-                  <span className="text-xs font-semibold text-white/80">{ev.toolName}</span>
-                )}
-                {ev.model && (
-                  <span className="text-[10px] text-white/20 font-mono">
-                    {ev.model.split("/").pop()}
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-semibold border ${TYPE_BADGE[ev.type] ?? "bg-white/5 text-white/30 border-white/5"}`}>
+                    {ev.type.replace("_", " ")}
                   </span>
-                )}
-              </div>
+                  {ev.toolName && (
+                    <span className="text-xs font-semibold text-white/80">{ev.toolName}</span>
+                  )}
+                  {ev.model && (
+                    <span className="text-[10px] text-white/20 font-mono">
+                      {ev.model.split("/").pop()}
+                    </span>
+                  )}
+                  {/* Expand indicator */}
+                  {(ev.input != null || ev.output != null) && (
+                    <span className="text-[9px] text-white/20 ml-auto">
+                      {expandedId === ev.id ? "▲" : "▼"}
+                    </span>
+                  )}
+                </div>
 
-              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                {ev.durationMs != null && (
-                  <span className="text-[10px] text-white/30">{ev.durationMs}ms</span>
-                )}
-                {(ev.inputTokens || ev.outputTokens) && (
-                  <span className="text-[10px] text-white/20 font-mono">
-                    {ev.inputTokens ?? 0}↑ {ev.outputTokens ?? 0}↓
-                  </span>
-                )}
-                {ev.error && (
-                  <span className="text-[10px] text-red-400/70 truncate max-w-[200px]">{ev.error}</span>
-                )}
-              </div>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  {ev.durationMs != null && (
+                    <span className="text-[10px] text-white/30">{ev.durationMs}ms</span>
+                  )}
+                  {(ev.inputTokens || ev.outputTokens) && (
+                    <span className="text-[10px] text-white/20 font-mono">
+                      {ev.inputTokens ?? 0}↑ {ev.outputTokens ?? 0}↓
+                    </span>
+                  )}
+                  {ev.error && (
+                    <span className="text-[10px] text-red-400/70 truncate max-w-[200px]">{ev.error}</span>
+                  )}
+                </div>
 
-              <div className="mt-0.5 text-[10px] text-white/15 font-mono">
-                {ev.sessionId.slice(0, 8)}… ·{" "}
-                {formatDistanceToNow(new Date(ev.timestamp), { addSuffix: true })}
+                <div className="mt-0.5 text-[10px] text-white/15 font-mono">
+                  {ev.sessionId.slice(0, 8)}… ·{" "}
+                  {formatDistanceToNow(new Date(ev.timestamp), { addSuffix: true })}
+                </div>
               </div>
             </div>
+
+            {/* Expanded detail panel */}
+            {expandedId === ev.id && <EventDetail event={ev} />}
           </div>
         ))}
       </div>
