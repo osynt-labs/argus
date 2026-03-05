@@ -59,14 +59,35 @@ const TOOL_ICONS: Record<string, string> = {
 };
 
 const TYPE_BADGE: Record<string, string> = {
-  TOOL_CALL:     "bg-blue-500/15    text-blue-300    border-blue-500/20",
-  MESSAGE_SEND:  "bg-green-500/15   text-green-300   border-green-500/20",
-  AGENT_SPAWN:   "bg-purple-500/15  text-purple-300  border-purple-500/20",
-  CRON_RUN:      "bg-yellow-500/15  text-yellow-300  border-yellow-500/20",
-  ERROR:         "bg-red-500/15     text-red-300     border-red-500/20",
-  SESSION_START: "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
-  SESSION_END:   "bg-gray-500/15    text-gray-400    border-gray-500/20",
-  MODEL_SWITCH:  "bg-cyan-500/15    text-cyan-300    border-cyan-500/20",
+  TOOL_CALL:        "bg-blue-500/15    text-blue-300    border-blue-500/20",
+  MESSAGE_SEND:     "bg-green-500/15   text-green-300   border-green-500/20",
+  MESSAGE_SENT:     "bg-green-500/15   text-green-300   border-green-500/20",
+  MESSAGE_RECEIVED: "bg-sky-500/15     text-sky-300     border-sky-500/20",
+  AGENT_SPAWN:      "bg-purple-500/15  text-purple-300  border-purple-500/20",
+  AGENT_START:      "bg-violet-500/15  text-violet-300  border-violet-500/20",
+  AGENT_END:        "bg-violet-500/10  text-violet-400  border-violet-500/15",
+  SUBAGENT_SPAWNING:"bg-purple-500/10  text-purple-400  border-purple-500/15",
+  SUBAGENT_ENDED:   "bg-purple-500/10  text-purple-400  border-purple-500/15",
+  CRON_RUN:         "bg-yellow-500/15  text-yellow-300  border-yellow-500/20",
+  ERROR:            "bg-red-500/15     text-red-300     border-red-500/20",
+  SESSION_START:    "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
+  SESSION_END:      "bg-gray-500/15    text-gray-400    border-gray-500/20",
+  MODEL_SWITCH:     "bg-cyan-500/15    text-cyan-300    border-cyan-500/20",
+};
+
+// Type → display icon for non-tool events
+const TYPE_ICONS: Record<string, string> = {
+  MESSAGE_RECEIVED: "📨",
+  MESSAGE_SENT:     "📤",
+  MESSAGE_SEND:     "📤",
+  AGENT_START:      "🚀",
+  AGENT_END:        "🏁",
+  SUBAGENT_SPAWNING:"🌱",
+  SUBAGENT_ENDED:   "🌿",
+  SESSION_START:    "▶️",
+  SESSION_END:      "⏹️",
+  CRON_RUN:         "⏰",
+  ERROR:            "🔴",
 };
 
 // LLM tool calls have a special teal badge override
@@ -109,8 +130,12 @@ function JsonBlock({ data, label }: { data: unknown; label: string }) {
 
 function EventDetail({ event }: { event: Event }) {
   const meta = event.metadata;
-  const isLlm    = event.toolName === "llm_call";
-  const isSpawn  = event.type === "AGENT_SPAWN";
+  const isLlm             = event.toolName === "llm_call";
+  const isSpawn           = event.type === "AGENT_SPAWN";
+  const isMessageReceived = event.type === "MESSAGE_RECEIVED";
+  const isMessageSent     = event.type === "MESSAGE_SENT" || event.type === "MESSAGE_SEND";
+  const isAgentStart      = event.type === "AGENT_START";
+  const isSubagentEnd     = event.type === "SUBAGENT_ENDED";
 
   return (
     <div
@@ -129,7 +154,70 @@ function EventDetail({ event }: { event: Event }) {
         )}
       </div>
 
-      {/* Agent spawn task preview */}
+      {/* ── Message Received ── */}
+      {isMessageReceived && meta && (
+        <div className="mb-2 p-2.5 bg-sky-500/5 border border-sky-500/10 rounded-md space-y-1">
+          {meta.sender_name  && <div className="text-[11px] text-sky-200/80">👤 {meta.sender_name as string}</div>}
+          {meta.channel      && <div className="text-[11px] text-sky-200/40 font-mono">📡 {meta.channel as string}{meta.provider ? ` (${meta.provider})` : ""}</div>}
+          {meta.content_preview && (
+            <div className="mt-1.5 p-2 bg-black/20 rounded text-[11px] text-white/50 italic">
+              &ldquo;{meta.content_preview as string}&rdquo;
+            </div>
+          )}
+          <div className="text-[10px] text-white/20 font-mono">
+            {meta.content_length != null && `${meta.content_length} chars`}
+            {meta.is_group && " · group"}
+          </div>
+        </div>
+      )}
+
+      {/* ── Message Sent ── */}
+      {isMessageSent && meta && (
+        <div className="mb-2 p-2.5 bg-green-500/5 border border-green-500/10 rounded-md space-y-1">
+          {meta.channel && <div className="text-[11px] text-green-200/40 font-mono">📡 {meta.channel as string}</div>}
+          {meta.response_time_ms != null && (
+            <div className="text-[11px] text-green-300/60">⏱ Response time: <span className="font-semibold">{meta.response_time_ms as number}ms</span></div>
+          )}
+          {meta.content_preview && (
+            <div className="mt-1.5 p-2 bg-black/20 rounded text-[11px] text-white/50 italic">
+              &ldquo;{meta.content_preview as string}&rdquo;
+            </div>
+          )}
+          {meta.content_length != null && (
+            <div className="text-[10px] text-white/20 font-mono">{meta.content_length as number} chars</div>
+          )}
+        </div>
+      )}
+
+      {/* ── Agent Start ── */}
+      {isAgentStart && meta && (
+        <div className="mb-2 p-2.5 bg-violet-500/5 border border-violet-500/10 rounded-md space-y-1">
+          {meta.prompt_preview && (
+            <div className="p-2 bg-black/20 rounded text-[11px] text-white/50 italic">
+              &ldquo;{meta.prompt_preview as string}&rdquo;
+            </div>
+          )}
+          <div className="flex gap-3 text-[10px] text-violet-300/40 font-mono">
+            {meta.prompt_length  != null && <span>prompt: {meta.prompt_length as number} chars</span>}
+            {meta.messages_count != null && <span>history: {meta.messages_count as number} msgs</span>}
+          </div>
+        </div>
+      )}
+
+      {/* ── Subagent Ended ── */}
+      {isSubagentEnd && meta && (
+        <div className="mb-2 p-2.5 bg-purple-500/5 border border-purple-500/10 rounded-md space-y-1">
+          {meta.target_session_key && <div className="text-[11px] text-purple-200/60 font-mono">{meta.target_session_key as string}</div>}
+          {meta.outcome && (
+            <div className={`text-[11px] font-semibold ${meta.outcome === "ok" ? "text-green-400/70" : "text-red-400/70"}`}>
+              {meta.outcome === "ok" ? "✅" : "❌"} {meta.outcome as string}
+            </div>
+          )}
+          {meta.reason && <div className="text-[11px] text-white/30">Reason: {meta.reason as string}</div>}
+        </div>
+      )}
+
+      {/* ── Agent Spawn task ── */}
       {isSpawn && meta?.task && (
         <div className="mb-2 p-2.5 bg-purple-500/5 border border-purple-500/10 rounded-md">
           <div className="text-[10px] font-semibold text-purple-300/60 uppercase tracking-wider mb-1">Task</div>
@@ -163,8 +251,9 @@ function EventDetail({ event }: { event: Event }) {
       <JsonBlock data={event.input}  label="Input (params)"  />
       <JsonBlock data={event.output} label="Output (result)" />
 
-      {/* Other metadata (non-special fields) */}
-      {meta && !isSpawn && !isLlm && Object.keys(meta).some(k => meta[k] != null) && (
+      {/* Generic metadata for other types */}
+      {meta && !isSpawn && !isLlm && !isMessageReceived && !isMessageSent && !isAgentStart && !isSubagentEnd &&
+        Object.keys(meta).some(k => meta[k] != null) && (
         <JsonBlock data={meta} label="Metadata" />
       )}
 
@@ -211,19 +300,23 @@ export function LiveFeed({
     return () => es.close();
   }, [setConn]);
 
-  const filtered = filter === "all"    ? events
-    : filter === "errors"  ? events.filter(e => e.status === "error" || !!e.error)
-    : filter === "tools"   ? events.filter(e => e.type === "TOOL_CALL" && e.toolName !== "llm_call")
-    : filter === "agents"  ? events.filter(e => e.type === "AGENT_SPAWN")
-    : filter === "llm"     ? events.filter(e => e.toolName === "llm_call")
+  const filtered = filter === "all"      ? events
+    : filter === "errors"    ? events.filter(e => e.status === "error" || !!e.error)
+    : filter === "tools"     ? events.filter(e => e.type === "TOOL_CALL" && e.toolName !== "llm_call")
+    : filter === "agents"    ? events.filter(e => ["AGENT_SPAWN","AGENT_START","AGENT_END","SUBAGENT_SPAWNING","SUBAGENT_ENDED"].includes(e.type))
+    : filter === "llm"       ? events.filter(e => e.toolName === "llm_call")
+    : filter === "messages"  ? events.filter(e => ["MESSAGE_RECEIVED","MESSAGE_SENT","MESSAGE_SEND"].includes(e.type))
+    : filter === "sessions"  ? events.filter(e => ["SESSION_START","SESSION_END"].includes(e.type))
     : events;
 
   const filters = [
-    { id: "all",    label: "All" },
-    { id: "tools",  label: "⚡ Tools" },
-    { id: "agents", label: "🤖 Agents" },
-    { id: "llm",    label: "✨ LLM" },
-    { id: "errors", label: "🔴 Errors" },
+    { id: "all",      label: "All" },
+    { id: "tools",    label: "⚡ Tools" },
+    { id: "agents",   label: "🤖 Agents" },
+    { id: "llm",      label: "✨ LLM" },
+    { id: "messages", label: "📨 Messages" },
+    { id: "sessions", label: "▶️ Sessions" },
+    { id: "errors",   label: "🔴 Errors" },
   ];
 
   return (
@@ -284,11 +377,7 @@ export function LiveFeed({
               >
                 {/* Icon */}
                 <span className="text-lg shrink-0 w-7 text-center mt-0.5">
-                  {TOOL_ICONS[ev.toolName ?? ""] ??
-                    (ev.type === "CRON_RUN"     ? "⏰" :
-                     ev.type === "SESSION_START" ? "▶️" :
-                     ev.type === "SESSION_END"   ? "⏹️" :
-                     ev.type === "MESSAGE_SEND"  ? "💬" : "📌")}
+                  {TOOL_ICONS[ev.toolName ?? ""] ?? TYPE_ICONS[ev.type] ?? "📌"}
                 </span>
 
                 {/* Content */}
