@@ -9,6 +9,7 @@ export default auth((req) => {
     "/login",
     "/api/auth",
     "/api/ingest",
+    "/api/setup",
     "/api/health",
     "/api/live",   // SSE — auth checked via cookie in browser
   ];
