@@ -62,6 +62,7 @@ resource "kubernetes_secret" "argus" {
     ARGUS_PASSWORD  = data.google_secret_manager_secret_version.password.secret_data
     NEXTAUTH_SECRET = data.google_secret_manager_secret_version.nextauth_secret.secret_data
     NEXTAUTH_URL    = "https://argus.osynt.ai"
+    AUTH_TRUST_HOST = "true"
     SETUP_SECRET    = data.google_secret_manager_secret_version.setup_secret.secret_data
   }
 
