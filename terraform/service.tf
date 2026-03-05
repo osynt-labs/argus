@@ -15,7 +15,7 @@ resource "kubernetes_service" "argus" {
       protocol    = "TCP"
     }
 
-    type = "ClusterIP"
+    type = "NodePort"
   }
 }
 
