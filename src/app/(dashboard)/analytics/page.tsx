@@ -153,7 +153,7 @@ export default function AnalyticsPage() {
 
             {/* Timeline chart */}
             <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-              <h3 className="text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-4">
+              <h3 className="text-sm font-semibold text-white/50 mb-4">
                 Event Timeline
               </h3>
               {timelineFormatted.length > 0 ? (
@@ -220,7 +220,7 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Tool breakdown */}
               <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                <h3 className="text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-4">
+                <h3 className="text-sm font-semibold text-white/50 mb-4">
                   Tool Usage ({timeRange}h)
                 </h3>
                 {toolBreakdown.length > 0 ? (
@@ -259,7 +259,7 @@ export default function AnalyticsPage() {
 
               {/* Event type distribution */}
               <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                <h3 className="text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-4">
+                <h3 className="text-sm font-semibold text-white/50 mb-4">
                   Event Type Distribution
                 </h3>
                 {eventTypes.length > 0 ? (
@@ -311,7 +311,7 @@ export default function AnalyticsPage() {
             {/* Model breakdown */}
             {analytics?.modelBreakdown && analytics.modelBreakdown.length > 0 && (
               <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                <h3 className="text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-3">
+                <h3 className="text-sm font-semibold text-white/50 mb-3">
                   Model Usage
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -342,7 +342,7 @@ export default function AnalyticsPage() {
             {/* Recent errors */}
             {events.filter((e) => e.status === "error" || e.error).length > 0 && (
               <div className="rounded-xl border border-red-500/10 bg-red-500/[0.02] p-4">
-                <h3 className="text-[11px] font-semibold text-red-400/60 uppercase tracking-wider mb-3">
+                <h3 className="text-sm font-semibold text-red-400/70 mb-3">
                   Recent Errors
                 </h3>
                 <div className="space-y-2">
@@ -394,16 +394,16 @@ function SummaryCard({
   sub?: string;
   color: string;
 }) {
-  const colorMap: Record<string, string> = {
-    blue: "border-blue-500/15 bg-blue-500/5 text-blue-300",
-    red: "border-red-500/15 bg-red-500/5 text-red-300",
-    green: "border-green-500/15 bg-green-500/5 text-green-300",
-    purple: "border-purple-500/15 bg-purple-500/5 text-purple-300",
+  const borderMap: Record<string, string> = {
+    blue:   "border-l-blue-500/50   bg-blue-500/[0.04]   text-blue-300",
+    red:    "border-l-red-500/50    bg-red-500/[0.04]    text-red-300",
+    green:  "border-l-green-500/50  bg-green-500/[0.04]  text-green-300",
+    purple: "border-l-purple-500/50 bg-purple-500/[0.04] text-purple-300",
   };
   return (
-    <div className={`rounded-xl border p-3 ${colorMap[color]}`}>
-      <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">{label}</div>
-      <div className="text-xl font-bold">{value}</div>
+    <div className={`rounded-xl border border-white/[0.06] border-l-2 p-3 ${borderMap[color]}`}>
+      <div className="text-[10px] text-white/30 font-medium mb-1">{label}</div>
+      <div className="text-2xl font-bold tabular-nums">{value}</div>
       {sub && <div className="text-[10px] text-white/20 mt-0.5">{sub}</div>}
     </div>
   );

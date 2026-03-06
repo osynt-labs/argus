@@ -7,7 +7,7 @@ export async function GET() {
     const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const h1 = new Date(now.getTime() - 60 * 60 * 1000);
 
-    const [total, last24h, last1h, byTool, byType, errorsLast24h, tokenStats, costStats] =
+    const [total, last24h, last1h, byTool, byType, errorsLast24h, tokenStats] =
       await Promise.all([
         prisma.event.count(),
         prisma.event.count({ where: { timestamp: { gte: h24 } } }),
@@ -32,11 +32,19 @@ export async function GET() {
           _sum: { inputTokens: true, outputTokens: true, cacheTokens: true },
           _avg: { durationMs: true },
         }),
-        prisma.event.aggregate({
-          where: { timestamp: { gte: h24 }, costUsd: { not: null } },
-          _sum: { costUsd: true },
-        }),
       ]);
+
+    // costUsd column may not exist yet (migration pending) — fail gracefully
+    let costUsd24h: number | null = null;
+    try {
+      const costStats = await prisma.event.aggregate({
+        where: { timestamp: { gte: h24 }, costUsd: { not: null } },
+        _sum: { costUsd: true },
+      });
+      costUsd24h = costStats._sum.costUsd ?? 0;
+    } catch {
+      // column not migrated yet — return null, UI shows "—"
+    }
 
     return NextResponse.json({
       total,
@@ -46,7 +54,7 @@ export async function GET() {
       byType,
       errorsLast24h,
       tokenStats,
-      costUsd24h: costStats._sum.costUsd ?? 0,
+      costUsd24h,
     });
   } catch (err) {
     console.error("[api/stats] DB query failed:", err);
