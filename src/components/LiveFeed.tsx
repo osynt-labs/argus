@@ -276,34 +276,41 @@ function EventDetail({ event }: { event: Event }) {
 
 export function LiveFeed({
   initialEvents = [],
+  externalEvents,
   onConnectionChange,
 }: {
   initialEvents?: Event[];
+  externalEvents?: Event[];
   onConnectionChange?: (connected: boolean) => void;
 }) {
-  const [events,     setEvents]     = useState<Event[]>(initialEvents);
+  const [ownEvents,  setOwnEvents]  = useState<Event[]>(initialEvents);
   const [connected,  setConnected]  = useState(false);
   const [filter,     setFilter]     = useState<string>("all");
   const [newCount,   setNewCount]   = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
+  // Use external events if provided (from dashboard layout context), otherwise manage own SSE
+  const events = externalEvents ?? ownEvents;
+
   const setConn = useCallback((v: boolean) => {
     setConnected(v);
     onConnectionChange?.(v);
   }, [onConnectionChange]);
 
+  // Only run own SSE if no external events are provided
   useEffect(() => {
+    if (externalEvents) return;
     const es = new EventSource("/api/live");
     es.onopen    = () => setConn(true);
     es.onerror   = () => setConn(false);
     es.onmessage = (e) => {
       const event: Event = JSON.parse(e.data);
-      setEvents((prev) => [event, ...prev].slice(0, 500));
+      setOwnEvents((prev) => [event, ...prev].slice(0, 500));
       setNewCount((n) => n + 1);
     };
     return () => es.close();
-  }, [setConn]);
+  }, [setConn, externalEvents]);
 
   const filtered = filter === "all"      ? events
     : filter === "errors"    ? events.filter(e => e.status === "error" || !!e.error)
