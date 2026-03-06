@@ -61,6 +61,7 @@ export default function OverviewPage() {
                     last24h: stats.last24h,
                     last1h: stats.last1h,
                     errorsLast24h: stats.errorsLast24h,
+                    costUsd24h: stats.costUsd24h,
                     tokenStats: stats.tokenStats,
                   }}
                 />

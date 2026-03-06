@@ -75,6 +75,24 @@ const TYPE_BADGE: Record<string, string> = {
   MODEL_SWITCH:     "bg-cyan-500/15    text-cyan-300    border-cyan-500/20",
 };
 
+// Left-border accent per event type (fast visual scan)
+const TYPE_BORDER: Record<string, string> = {
+  TOOL_CALL:         "border-l-blue-500/50",
+  MESSAGE_SEND:      "border-l-green-500/50",
+  MESSAGE_SENT:      "border-l-green-500/50",
+  MESSAGE_RECEIVED:  "border-l-sky-500/50",
+  AGENT_SPAWN:       "border-l-purple-500/60",
+  AGENT_START:       "border-l-violet-500/50",
+  AGENT_END:         "border-l-violet-500/30",
+  SUBAGENT_SPAWNING: "border-l-purple-400/40",
+  SUBAGENT_ENDED:    "border-l-purple-400/30",
+  CRON_RUN:          "border-l-yellow-500/50",
+  ERROR:             "border-l-red-500/70",
+  SESSION_START:     "border-l-emerald-500/50",
+  SESSION_END:       "border-l-gray-500/30",
+  MODEL_SWITCH:      "border-l-cyan-500/40",
+};
+
 // Type → display icon for non-tool events
 const TYPE_ICONS: Record<string, string> = {
   MESSAGE_RECEIVED: "📨",
@@ -377,14 +395,12 @@ export function LiveFeed({
             <div key={ev.id}>
               <div
                 onClick={() => setExpandedId(expandedId === ev.id ? null : ev.id)}
-                className={`flex items-start gap-3 px-3 py-2.5 border-b border-white/[0.03] transition-colors cursor-pointer hover:bg-white/[0.03] ${
+                className={`flex items-start gap-3 px-3 py-2.5 border-b border-white/[0.03] border-l-2 transition-colors cursor-pointer hover:bg-white/[0.03] ${
                   expandedId === ev.id ? "bg-white/[0.04]" : ""
                 } ${
                   ev.status === "error" || ev.error
-                    ? "border-l-2 border-l-red-500/60"
-                    : isSpawn
-                    ? "border-l-2 border-l-purple-500/40"
-                    : ""
+                    ? "border-l-red-500/70 bg-red-500/[0.02]"
+                    : TYPE_BORDER[ev.type] ?? "border-l-transparent"
                 }`}
               >
                 {/* Icon */}
@@ -459,9 +475,14 @@ export function LiveFeed({
                     )}
                   </div>
 
-                  <div className="mt-0.5 text-[10px] text-white/15 font-mono">
-                    {ev.sessionId.slice(0, 8)}… ·{" "}
-                    {formatDistanceToNow(new Date(ev.timestamp), { addSuffix: true })}
+                  <div className="mt-0.5 flex items-center gap-2 text-[10px] text-white/15 font-mono">
+                    <span>{ev.sessionId.slice(0, 8)}…</span>
+                    <span className="text-white/10">·</span>
+                    <span className="tabular-nums">
+                      {new Date(ev.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                    </span>
+                    <span className="text-white/10">·</span>
+                    <span>{formatDistanceToNow(new Date(ev.timestamp), { addSuffix: true })}</span>
                   </div>
                 </div>
               </div>
