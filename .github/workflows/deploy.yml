@@ -67,17 +67,6 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve plan.out
 
-      - name: Run DB Migrations
-        run: |
-          # Wait for new pod to be running, then exec prisma migrate deploy
-          kubectl rollout status deployment/argus -n argus --timeout=300s
-          POD=$(kubectl get pods -n argus -l app=argus --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')
-          echo "Running migrations on pod: $POD"
-          kubectl exec -n argus $POD -- node -e "
-            const { execSync } = require('child_process');
-            execSync('npx prisma migrate deploy', { stdio: 'inherit', cwd: '/app' });
-          " || echo "Migration step skipped (exec not available)"
-
       - name: Verify Deployment
         run: |
           kubectl rollout status deployment/argus -n argus --timeout=300s
