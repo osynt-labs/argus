@@ -18,6 +18,7 @@ export interface IngestPayload {
   input_tokens?: number;
   output_tokens?: number;
   cache_tokens?: number;
+  cost_usd?: number;
   error?: string;
   status?: string;
   metadata?: unknown;
@@ -83,6 +84,7 @@ export async function ingestEvent(payload: IngestPayload) {
       inputTokens: payload.input_tokens,
       outputTokens: payload.output_tokens,
       cacheTokens: payload.cache_tokens,
+      costUsd: payload.cost_usd,
       error: payload.error,
       status: payload.status ?? "ok",
       metadata: payload.metadata as any,

@@ -7,14 +7,38 @@ import type { DashboardEvent } from "../layout";
 
 // ── Type badge colours (matches LiveFeed) ───────────────────────────
 const TYPE_BADGE: Record<string, string> = {
-  TOOL_CALL: "bg-blue-500/15 text-blue-300 border-blue-500/20",
-  MESSAGE_SEND: "bg-green-500/15 text-green-300 border-green-500/20",
-  AGENT_SPAWN: "bg-purple-500/15 text-purple-300 border-purple-500/20",
-  CRON_RUN: "bg-yellow-500/15 text-yellow-300 border-yellow-500/20",
-  ERROR: "bg-red-500/15 text-red-300 border-red-500/20",
-  SESSION_START: "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
-  SESSION_END: "bg-gray-500/15 text-gray-400 border-gray-500/20",
-  MODEL_SWITCH: "bg-cyan-500/15 text-cyan-300 border-cyan-500/20",
+  TOOL_CALL:        "bg-blue-500/15    text-blue-300    border-blue-500/20",
+  MESSAGE_SEND:     "bg-green-500/15   text-green-300   border-green-500/20",
+  MESSAGE_SENT:     "bg-green-500/15   text-green-300   border-green-500/20",
+  MESSAGE_RECEIVED: "bg-sky-500/15     text-sky-300     border-sky-500/20",
+  AGENT_SPAWN:      "bg-purple-500/15  text-purple-300  border-purple-500/20",
+  AGENT_START:      "bg-violet-500/15  text-violet-300  border-violet-500/20",
+  AGENT_END:        "bg-violet-500/10  text-violet-400  border-violet-500/15",
+  SUBAGENT_SPAWNING:"bg-purple-500/10  text-purple-400  border-purple-500/15",
+  SUBAGENT_ENDED:   "bg-purple-500/10  text-purple-400  border-purple-500/15",
+  CRON_RUN:         "bg-yellow-500/15  text-yellow-300  border-yellow-500/20",
+  ERROR:            "bg-red-500/15     text-red-300     border-red-500/20",
+  SESSION_START:    "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
+  SESSION_END:      "bg-gray-500/15    text-gray-400    border-gray-500/20",
+  MODEL_SWITCH:     "bg-cyan-500/15    text-cyan-300    border-cyan-500/20",
+};
+
+// Left border accent per event type
+const TYPE_BORDER: Record<string, string> = {
+  TOOL_CALL:         "border-l-blue-500/40",
+  MESSAGE_SEND:      "border-l-green-500/40",
+  MESSAGE_SENT:      "border-l-green-500/40",
+  MESSAGE_RECEIVED:  "border-l-sky-500/40",
+  AGENT_SPAWN:       "border-l-purple-500/60",
+  AGENT_START:       "border-l-violet-500/40",
+  AGENT_END:         "border-l-violet-500/20",
+  SUBAGENT_SPAWNING: "border-l-purple-400/40",
+  SUBAGENT_ENDED:    "border-l-purple-400/20",
+  CRON_RUN:          "border-l-yellow-500/40",
+  ERROR:             "border-l-red-500/70",
+  SESSION_START:     "border-l-emerald-500/40",
+  SESSION_END:       "border-l-gray-500/20",
+  MODEL_SWITCH:      "border-l-cyan-500/40",
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -510,6 +534,24 @@ export default function EventsPage() {
         </div>
       </div>
 
+      {/* ── Mini stats bar ───────────────────────────────────────── */}
+      {filteredEvents.length > 0 && (
+        <div className="shrink-0 px-4 sm:px-6 py-2 border-b border-white/[0.04] bg-white/[0.01] flex items-center gap-4 overflow-x-auto scrollbar-none">
+          {[
+            { label: "Tool calls", count: filteredEvents.filter(e => e.type === "TOOL_CALL").length, color: "text-blue-400" },
+            { label: "Messages", count: filteredEvents.filter(e => ["MESSAGE_SEND","MESSAGE_SENT","MESSAGE_RECEIVED"].includes(e.type)).length, color: "text-green-400" },
+            { label: "LLM calls", count: filteredEvents.filter(e => e.toolName === "llm_call").length, color: "text-indigo-400" },
+            { label: "Agent events", count: filteredEvents.filter(e => ["AGENT_SPAWN","AGENT_START","AGENT_END","SUBAGENT_SPAWNING","SUBAGENT_ENDED"].includes(e.type)).length, color: "text-purple-400" },
+            { label: "Errors", count: filteredEvents.filter(e => e.status === "error" || !!e.error).length, color: "text-red-400" },
+          ].map(({ label, count, color }) => count > 0 && (
+            <div key={label} className="flex items-center gap-1.5 shrink-0">
+              <span className={`text-xs font-bold tabular-nums ${color}`}>{count.toLocaleString()}</span>
+              <span className="text-[10px] text-white/20">{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ── Events table ─────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
         {/* Table header */}
@@ -561,13 +603,11 @@ export default function EventsPage() {
             <div key={ev.id}>
               <div
                 onClick={() => setSelectedId(isSelected ? null : ev.id)}
-                className={`grid grid-cols-[140px_120px_1fr_100px_80px_80px_60px] gap-2 px-4 sm:px-6 py-2.5 text-xs border-b border-white/[0.03] cursor-pointer transition-colors ${
-                  isSelected
-                    ? "bg-white/[0.06]"
-                    : isError
-                    ? "bg-red-500/[0.03] hover:bg-red-500/[0.06]"
-                    : "hover:bg-white/[0.03]"
-                }`}
+                className={`grid grid-cols-[140px_120px_1fr_100px_80px_80px_60px] gap-2 px-4 sm:px-6 py-2.5 text-xs border-b border-white/[0.03] border-l-2 cursor-pointer transition-colors ${
+                  isError
+                    ? "border-l-red-500/70 bg-red-500/[0.03] hover:bg-red-500/[0.05]"
+                    : TYPE_BORDER[ev.type] ?? "border-l-transparent"
+                } ${isSelected ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"}`}
               >
                 {/* Time */}
                 <div className="flex flex-col justify-center min-w-0">

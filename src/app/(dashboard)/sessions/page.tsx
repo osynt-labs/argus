@@ -258,22 +258,37 @@ function SessionCard({
   maxEvents: number;
 }) {
   const progressPct = Math.round((session.totalEvents / maxEvents) * 100);
+  const isActiveNow = Date.now() - new Date(session.lastSeenAt).getTime() < 5 * 60 * 1000; // 5 min
 
   return (
     <Link
       href={`/sessions/${session.id}`}
-      className="block rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] active:bg-white/[0.05] transition-colors p-4 group"
+      className={`block rounded-xl border transition-colors p-4 group ${
+        isActiveNow
+          ? "border-emerald-500/20 bg-emerald-500/[0.03] hover:bg-emerald-500/[0.05]"
+          : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+      }`}
     >
       <div className="flex items-start justify-between gap-4">
         {/* Left: identity */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
+            {isActiveNow && (
+              <span className="flex items-center gap-1 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              </span>
+            )}
             <span className="text-sm font-mono font-medium text-white/80 truncate">
               {session.key ?? session.id.slice(0, 14) + "\u2026"}
             </span>
             {session.label && (
               <span className="text-[10px] text-blue-300/60 bg-blue-500/10 border border-blue-500/10 px-1.5 py-0.5 rounded shrink-0">
                 {session.label}
+              </span>
+            )}
+            {isActiveNow && (
+              <span className="text-[9px] text-emerald-400/70 bg-emerald-500/10 border border-emerald-500/15 px-1.5 py-0.5 rounded-full shrink-0 font-medium">
+                active
               </span>
             )}
           </div>
