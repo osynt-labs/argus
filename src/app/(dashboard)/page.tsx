@@ -43,7 +43,7 @@ export default function OverviewPage() {
             data-lg-full-height
           >
             <div className="px-4 py-2.5 border-b border-white/[0.06] flex items-center justify-between">
-              <h2 className="text-[11px] font-semibold text-white/40 uppercase tracking-wider">Live Feed</h2>
+              <h2 className="text-xs font-semibold text-white/40">Live Feed</h2>
               <span className="text-[10px] text-white/15 tabular-nums">{events.length} events</span>
             </div>
             <div className="flex-1 min-h-0">

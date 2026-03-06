@@ -287,7 +287,7 @@ export default function SessionDetailPage({
       {/* Event Timeline */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 sm:px-6 py-3 border-b border-white/[0.06] flex items-center justify-between sticky top-0 bg-[#0a0a0f] z-10">
-          <h2 className="text-[11px] font-semibold text-white/40 uppercase tracking-wider">
+          <h2 className="text-sm font-semibold text-white/50">
             Event Timeline
           </h2>
           <span className="text-[10px] text-white/15 tabular-nums">

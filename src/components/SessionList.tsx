@@ -16,7 +16,7 @@ interface Session {
 export function SessionList({ sessions }: { sessions: Session[] }) {
   return (
     <div className="rounded-xl border border-white/5 bg-white/2 p-4">
-      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
+      <h3 className="text-xs font-semibold text-white/40 mb-3">
         Active Sessions (1h)
         <span className="ml-2 text-white/20 normal-case font-normal">
           {sessions.length} running

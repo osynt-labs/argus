@@ -19,7 +19,7 @@ export function ToolChart({ data }: { data: ToolData[] }) {
   if (chartData.length === 0) {
     return (
       <div className="rounded-xl border border-white/5 bg-white/2 p-4">
-        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">Top Tools (24h)</h3>
+        <h3 className="text-xs font-semibold text-white/40 mb-3">Top Tools (24h)</h3>
         <p className="text-xs text-white/20 text-center py-6">No data yet</p>
       </div>
     );
@@ -27,7 +27,7 @@ export function ToolChart({ data }: { data: ToolData[] }) {
 
   return (
     <div className="rounded-xl border border-white/5 bg-white/2 p-4">
-      <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-4">Top Tools (24h)</h3>
+      <h3 className="text-xs font-semibold text-white/40 mb-4">Top Tools (24h)</h3>
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={chartData} layout="vertical" margin={{ left: 4, right: 24, top: 0, bottom: 0 }}>
           <XAxis
