@@ -88,12 +88,12 @@ export default function AnalyticsPage() {
     <div className="flex flex-col h-full">
       {/* Page header */}
       <div className="shrink-0 px-4 sm:px-6 py-4 border-b border-white/[0.06]">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="text-lg font-semibold text-white">Analytics</h1>
-            <p className="text-xs text-white/30 mt-0.5">Trends and insights for OpenClaw activity</p>
+            <p className="text-xs text-white/30 mt-0.5 hidden sm:block">Trends and insights for OpenClaw activity</p>
           </div>
-          <div className="flex items-center gap-1 bg-white/[0.04] rounded-lg p-0.5">
+          <div className="flex items-center gap-1 bg-white/[0.04] rounded-xl sm:rounded-lg p-1 sm:p-0.5 shrink-0">
             {[
               { value: "24" as const, label: "24h" },
               { value: "72" as const, label: "3d" },
@@ -102,10 +102,10 @@ export default function AnalyticsPage() {
               <button
                 key={opt.value}
                 onClick={() => setTimeRange(opt.value)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                className={`px-4 sm:px-3 py-2.5 sm:py-1.5 rounded-lg sm:rounded-md text-sm sm:text-xs font-medium transition-colors min-h-[44px] sm:min-h-0 ${
                   timeRange === opt.value
                     ? "bg-white/10 text-white"
-                    : "text-white/30 hover:text-white/50"
+                    : "text-white/30 active:text-white/50 sm:hover:text-white/50"
                 }`}
               >
                 {opt.label}
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
           </div>
         ) : (
           <>
-            {/* Summary cards */}
+            {/* Summary cards - 2x2 grid on mobile, 4-col on desktop */}
             {analytics && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <SummaryCard
@@ -153,120 +153,128 @@ export default function AnalyticsPage() {
               </div>
             )}
 
-            {/* Timeline chart */}
+            {/* Timeline chart - scrollable on mobile */}
             <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
               <h3 className="text-sm font-semibold text-white/50 mb-4">
                 Event Timeline
               </h3>
               {isMounted && timelineFormatted.length > 0 ? (
-                <ResponsiveContainer width="100%" height={240}>
-                  <AreaChart data={timelineFormatted} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                    <defs>
-                      <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="gradErrors" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#ef4444" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                    <XAxis
-                      dataKey="label"
-                      tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 10 }}
-                      axisLine={false}
-                      tickLine={false}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis
-                      tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 10 }}
-                      axisLine={false}
-                      tickLine={false}
-                      width={40}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area
-                      type="monotone"
-                      dataKey="total"
-                      name="Total"
-                      stroke="#3b82f6"
-                      fill="url(#gradTotal)"
-                      strokeWidth={1.5}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="errors"
-                      name="Errors"
-                      stroke="#ef4444"
-                      fill="url(#gradErrors)"
-                      strokeWidth={1.5}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="tools"
-                      name="Tool Calls"
-                      stroke="#10b981"
-                      fill="transparent"
-                      strokeWidth={1}
-                      strokeDasharray="4 2"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                  <div className="min-w-[600px] sm:min-w-0">
+                    <ResponsiveContainer width="100%" height={180} className="sm:!h-[240px]">
+                      <AreaChart data={timelineFormatted} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                        <defs>
+                          <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
+                            <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="gradErrors" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.3} />
+                            <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 10 }}
+                          axisLine={false}
+                          tickLine={false}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis
+                          tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 10 }}
+                          axisLine={false}
+                          tickLine={false}
+                          width={40}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Area
+                          type="monotone"
+                          dataKey="total"
+                          name="Total"
+                          stroke="#3b82f6"
+                          fill="url(#gradTotal)"
+                          strokeWidth={1.5}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="errors"
+                          name="Errors"
+                          stroke="#ef4444"
+                          fill="url(#gradErrors)"
+                          strokeWidth={1.5}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="tools"
+                          name="Tool Calls"
+                          stroke="#10b981"
+                          fill="transparent"
+                          strokeWidth={1}
+                          strokeDasharray="4 2"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               ) : (
                 <p className="text-xs text-white/20 text-center py-10">No timeline data available</p>
               )}
             </div>
 
-            {/* Two-column: Tool breakdown + Event types */}
+            {/* Two-column: Tool breakdown + Event types - stacked on mobile */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Tool breakdown */}
+              {/* Tool breakdown - scrollable chart on mobile */}
               <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
                 <h3 className="text-sm font-semibold text-white/50 mb-4">
                   Tool Usage ({timeRange}h)
                 </h3>
                 {isMounted && toolBreakdown.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={Math.max(200, toolBreakdown.length * 28)}>
-                    <BarChart
-                      data={toolBreakdown.map((t: any) => ({ name: t.toolName ?? "unknown", count: t._count }))}
-                      layout="vertical"
-                      margin={{ left: 0, right: 16, top: 0, bottom: 0 }}
-                    >
-                      <XAxis
-                        type="number"
-                        tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 10 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="name"
-                        width={90}
-                        tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="count" name="Calls" radius={[0, 4, 4, 0]}>
-                        {toolBreakdown.map((_: any, i: number) => (
-                          <Cell key={i} fill={COLORS[i % COLORS.length]} fillOpacity={0.7} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <div className="min-w-[300px] sm:min-w-0">
+                      <ResponsiveContainer width="100%" height={Math.max(180, Math.min(toolBreakdown.length * 28, 300))}>
+                        <BarChart
+                          data={toolBreakdown.map((t: any) => ({ name: t.toolName ?? "unknown", count: t._count }))}
+                          layout="vertical"
+                          margin={{ left: 0, right: 16, top: 0, bottom: 0 }}
+                        >
+                          <XAxis
+                            type="number"
+                            tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 10 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            width={90}
+                            tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Bar dataKey="count" name="Calls" radius={[0, 4, 4, 0]}>
+                            {toolBreakdown.map((_: any, i: number) => (
+                              <Cell key={i} fill={COLORS[i % COLORS.length]} fillOpacity={0.7} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 ) : (
                   <p className="text-xs text-white/20 text-center py-6">No tool data</p>
                 )}
               </div>
 
-              {/* Event type distribution */}
+              {/* Event type distribution - responsive layout */}
               <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
                 <h3 className="text-sm font-semibold text-white/50 mb-4">
                   Event Type Distribution
                 </h3>
                 {isMounted && eventTypes.length > 0 ? (
-                  <div className="flex items-center gap-4">
-                    <div className="w-[180px] h-[180px] shrink-0">
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="w-[160px] h-[160px] sm:w-[180px] sm:h-[180px] shrink-0">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
@@ -276,8 +284,8 @@ export default function AnalyticsPage() {
                             }))}
                             cx="50%"
                             cy="50%"
-                            innerRadius={45}
-                            outerRadius={75}
+                            innerRadius={35}
+                            outerRadius={65}
                             paddingAngle={2}
                             dataKey="value"
                           >
@@ -289,17 +297,17 @@ export default function AnalyticsPage() {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="flex-1 space-y-1.5">
+                    <div className="flex-1 space-y-2 sm:space-y-1.5 w-full">
                       {eventTypes.map((t: any, i: number) => (
                         <div key={t.type} className="flex items-center gap-2">
                           <span
-                            className="w-2.5 h-2.5 rounded-sm shrink-0"
+                            className="w-3 h-3 sm:w-2.5 sm:h-2.5 rounded-sm shrink-0"
                             style={{ backgroundColor: COLORS[i % COLORS.length] }}
                           />
-                          <span className="text-xs text-white/50 flex-1 truncate">
+                          <span className="text-sm sm:text-xs text-white/50 flex-1 truncate">
                             {TYPE_LABELS[t.type] ?? t.type}
                           </span>
-                          <span className="text-xs font-mono text-white/30">{t._count}</span>
+                          <span className="text-sm sm:text-xs font-mono text-white/30">{t._count}</span>
                         </div>
                       ))}
                     </div>
@@ -320,17 +328,17 @@ export default function AnalyticsPage() {
                   {analytics.modelBreakdown.map((m, i) => (
                     <div
                       key={m.model}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.04]"
+                      className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.04] min-h-[52px]"
                     >
                       <div
                         className="w-3 h-3 rounded-full shrink-0"
                         style={{ backgroundColor: COLORS[i % COLORS.length] }}
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs font-medium text-white/70 truncate">
+                        <div className="text-sm sm:text-xs font-medium text-white/70 truncate">
                           {m.model?.split("/").pop() ?? "unknown"}
                         </div>
-                        <div className="text-[10px] text-white/30">
+                        <div className="text-xs sm:text-[10px] text-white/30">
                           {m._count} calls
                           {m.tokens ? ` · ${(m.tokens / 1000).toFixed(1)}k tokens` : ""}
                         </div>
@@ -354,23 +362,23 @@ export default function AnalyticsPage() {
                     .map((e) => (
                       <div
                         key={e.id}
-                        className="flex items-start gap-3 p-2.5 rounded-lg bg-red-500/[0.04] border border-red-500/[0.06]"
+                        className="flex items-start gap-3 p-3 rounded-lg bg-red-500/[0.04] border border-red-500/[0.06] min-h-[52px]"
                       >
-                        <span className="text-red-400 text-xs mt-0.5 shrink-0">!</span>
+                        <span className="text-red-400 text-sm sm:text-xs mt-0.5 shrink-0">!</span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-white/50 font-medium">
+                            <span className="text-sm sm:text-xs text-white/50 font-medium">
                               {e.toolName ?? e.type}
                             </span>
-                            <span className="text-[10px] text-white/20 font-mono">
+                            <span className="text-xs sm:text-[10px] text-white/20 font-mono">
                               {e.sessionId.slice(0, 8)}
                             </span>
                           </div>
                           {e.error && (
-                            <p className="text-[11px] text-red-300/60 mt-0.5 truncate">{e.error}</p>
+                            <p className="text-xs sm:text-[11px] text-red-300/60 mt-0.5 truncate">{e.error}</p>
                           )}
                         </div>
-                        <span className="text-[10px] text-white/15 shrink-0 tabular-nums">
+                        <span className="text-xs sm:text-[10px] text-white/15 shrink-0 tabular-nums">
                           {format(new Date(e.timestamp), "HH:mm:ss")}
                         </span>
                       </div>
@@ -404,9 +412,9 @@ function SummaryCard({
   };
   return (
     <div className={`rounded-xl border border-white/[0.06] border-l-2 p-3 ${borderMap[color]}`}>
-      <div className="text-[10px] text-white/30 font-medium mb-1">{label}</div>
-      <div className="text-2xl font-bold tabular-nums">{value}</div>
-      {sub && <div className="text-[10px] text-white/20 mt-0.5">{sub}</div>}
+      <div className="text-[11px] sm:text-[10px] text-white/30 font-medium mb-1">{label}</div>
+      <div className="text-2xl sm:text-2xl font-bold tabular-nums">{value}</div>
+      {sub && <div className="text-[11px] sm:text-[10px] text-white/20 mt-0.5">{sub}</div>}
     </div>
   );
 }

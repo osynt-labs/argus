@@ -62,7 +62,6 @@ export function Sidebar({
   const pathname = usePathname();
   const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const cfg = CONN_CONFIG[connState];
 
   const isActive = (href: string) => {
@@ -104,7 +103,6 @@ export function Sidebar({
             <Link
               key={item.href}
               href={item.href}
-              onClick={() => setMobileOpen(false)}
               className={`group flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                 active
                   ? "bg-white/[0.08] text-white shadow-sm shadow-white/[0.02]"
@@ -158,29 +156,53 @@ export function Sidebar({
 
   return (
     <>
-      {/* Mobile hamburger */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-3 left-3 z-50 w-10 h-10 rounded-xl bg-[#0d0d14] border border-white/[0.08] flex items-center justify-center text-white/40 hover:text-white/60"
+      {/* ══════════════════════════════════════════════════════════════
+          MOBILE: Bottom Navigation Bar (iOS/Android standard pattern)
+          ══════════════════════════════════════════════════════════════ */}
+      <nav 
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-lg border-t border-white/[0.08]"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-      </button>
-
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 flex">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <div className="relative bg-[#0d0d14] border-r border-white/[0.06] shadow-2xl">
-            {sidebar}
+        <div className="flex items-center justify-around h-16">
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] px-3 py-2 rounded-xl transition-colors ${
+                  active
+                    ? "text-blue-400"
+                    : "text-white/40 active:text-white/60"
+                }`}
+              >
+                <NavIcon
+                  name={item.icon}
+                  className={`w-6 h-6 ${active ? "text-blue-400" : "text-white/40"}`}
+                />
+                <span className={`text-[10px] font-medium ${active ? "text-blue-400" : "text-white/40"}`}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+        
+        {/* Connection indicator on mobile bottom nav */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0a0a0f] border border-white/[0.08] ${connState === "connected" ? "" : "border-amber-500/30"}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} ${connState === "connected" ? "animate-pulse" : ""}`} />
+            <span className={`text-[9px] font-medium ${cfg.text}`}>{cfg.label}</span>
+            {!dbHealthy && (
+              <span className="text-[8px] text-red-400 font-semibold">DB</span>
+            )}
           </div>
         </div>
-      )}
+      </nav>
 
-      {/* Desktop sidebar */}
+      {/* ══════════════════════════════════════════════════════════════
+          DESKTOP: Traditional sidebar
+          ══════════════════════════════════════════════════════════════ */}
       <div className="hidden lg:flex shrink-0 bg-[#0a0a0f] border-r border-white/[0.06]">
         {sidebar}
       </div>
