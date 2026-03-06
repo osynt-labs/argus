@@ -128,6 +128,11 @@ function JsonBlock({ data, label }: { data: unknown; label: string }) {
   );
 }
 
+// Safe cast helpers for EventMeta fields (typed as unknown)
+const ms = (v: unknown): string => v != null ? String(v) : "";
+const mn = (v: unknown): number => typeof v === "number" ? v : Number(v ?? 0);
+const mb = (v: unknown): boolean => Boolean(v);
+
 function EventDetail({ event }: { event: Event }) {
   const meta = event.metadata;
   const isLlm             = event.toolName === "llm_call";
@@ -157,16 +162,16 @@ function EventDetail({ event }: { event: Event }) {
       {/* ── Message Received ── */}
       {isMessageReceived && meta && (
         <div className="mb-2 p-2.5 bg-sky-500/5 border border-sky-500/10 rounded-md space-y-1">
-          {meta.sender_name  && <div className="text-[11px] text-sky-200/80">👤 {meta.sender_name as string}</div>}
-          {meta.channel      && <div className="text-[11px] text-sky-200/40 font-mono">📡 {meta.channel as string}{meta.provider ? ` (${meta.provider})` : ""}</div>}
-          {meta.content_preview && (
+          {ms(meta.sender_name)  && <div className="text-[11px] text-sky-200/80">👤 {ms(meta.sender_name)}</div>}
+          {ms(meta.channel)      && <div className="text-[11px] text-sky-200/40 font-mono">📡 {ms(meta.channel)}{meta.provider ? ` (${meta.provider})` : ""}</div>}
+          {ms(meta.content_preview) && (
             <div className="mt-1.5 p-2 bg-black/20 rounded text-[11px] text-white/50 italic">
-              &ldquo;{meta.content_preview as string}&rdquo;
+              &ldquo;{ms(meta.content_preview)}&rdquo;
             </div>
           )}
           <div className="text-[10px] text-white/20 font-mono">
             {meta.content_length != null && `${meta.content_length} chars`}
-            {meta.is_group && " · group"}
+            {mb(meta.is_group) && " · group"}
           </div>
         </div>
       )}
@@ -174,17 +179,17 @@ function EventDetail({ event }: { event: Event }) {
       {/* ── Message Sent ── */}
       {isMessageSent && meta && (
         <div className="mb-2 p-2.5 bg-green-500/5 border border-green-500/10 rounded-md space-y-1">
-          {meta.channel && <div className="text-[11px] text-green-200/40 font-mono">📡 {meta.channel as string}</div>}
+          {ms(meta.channel) && <div className="text-[11px] text-green-200/40 font-mono">📡 {ms(meta.channel)}</div>}
           {meta.response_time_ms != null && (
-            <div className="text-[11px] text-green-300/60">⏱ Response time: <span className="font-semibold">{meta.response_time_ms as number}ms</span></div>
+            <div className="text-[11px] text-green-300/60">⏱ Response time: <span className="font-semibold">{mn(meta.response_time_ms)}ms</span></div>
           )}
-          {meta.content_preview && (
+          {ms(meta.content_preview) && (
             <div className="mt-1.5 p-2 bg-black/20 rounded text-[11px] text-white/50 italic">
-              &ldquo;{meta.content_preview as string}&rdquo;
+              &ldquo;{ms(meta.content_preview)}&rdquo;
             </div>
           )}
           {meta.content_length != null && (
-            <div className="text-[10px] text-white/20 font-mono">{meta.content_length as number} chars</div>
+            <div className="text-[10px] text-white/20 font-mono">{mn(meta.content_length)} chars</div>
           )}
         </div>
       )}
@@ -192,14 +197,14 @@ function EventDetail({ event }: { event: Event }) {
       {/* ── Agent Start ── */}
       {isAgentStart && meta && (
         <div className="mb-2 p-2.5 bg-violet-500/5 border border-violet-500/10 rounded-md space-y-1">
-          {meta.prompt_preview && (
+          {ms(meta.prompt_preview) && (
             <div className="p-2 bg-black/20 rounded text-[11px] text-white/50 italic">
-              &ldquo;{meta.prompt_preview as string}&rdquo;
+              &ldquo;{ms(meta.prompt_preview)}&rdquo;
             </div>
           )}
           <div className="flex gap-3 text-[10px] text-violet-300/40 font-mono">
-            {meta.prompt_length  != null && <span>prompt: {meta.prompt_length as number} chars</span>}
-            {meta.messages_count != null && <span>history: {meta.messages_count as number} msgs</span>}
+            {meta.prompt_length  != null && <span>prompt: {mn(meta.prompt_length)} chars</span>}
+            {meta.messages_count != null && <span>history: {mn(meta.messages_count)} msgs</span>}
           </div>
         </div>
       )}
@@ -207,13 +212,13 @@ function EventDetail({ event }: { event: Event }) {
       {/* ── Subagent Ended ── */}
       {isSubagentEnd && meta && (
         <div className="mb-2 p-2.5 bg-purple-500/5 border border-purple-500/10 rounded-md space-y-1">
-          {meta.target_session_key && <div className="text-[11px] text-purple-200/60 font-mono">{meta.target_session_key as string}</div>}
-          {meta.outcome && (
-            <div className={`text-[11px] font-semibold ${meta.outcome === "ok" ? "text-green-400/70" : "text-red-400/70"}`}>
-              {meta.outcome === "ok" ? "✅" : "❌"} {meta.outcome as string}
+          {ms(meta.target_session_key) && <div className="text-[11px] text-purple-200/60 font-mono">{ms(meta.target_session_key)}</div>}
+          {ms(meta.outcome) && (
+            <div className={`text-[11px] font-semibold ${ms(meta.outcome) === "ok" ? "text-green-400/70" : "text-red-400/70"}`}>
+              {ms(meta.outcome) === "ok" ? "✅" : "❌"} {ms(meta.outcome)}
             </div>
           )}
-          {meta.reason && <div className="text-[11px] text-white/30">Reason: {meta.reason as string}</div>}
+          {ms(meta.reason) && <div className="text-[11px] text-white/30">Reason: {ms(meta.reason)}</div>}
         </div>
       )}
 
@@ -221,12 +226,12 @@ function EventDetail({ event }: { event: Event }) {
       {isSpawn && meta?.task && (
         <div className="mb-2 p-2.5 bg-purple-500/5 border border-purple-500/10 rounded-md">
           <div className="text-[10px] font-semibold text-purple-300/60 uppercase tracking-wider mb-1">Task</div>
-          <p className="text-[11px] text-purple-100/70 leading-relaxed whitespace-pre-wrap break-words">{meta.task}</p>
+          <p className="text-[11px] text-purple-100/70 leading-relaxed whitespace-pre-wrap break-words">{ms(meta.task)}</p>
           <div className="flex gap-3 mt-2 text-[10px] text-purple-300/40 font-mono">
-            {meta.mode    && <span>mode: {meta.mode}</span>}
-            {meta.runtime && <span>runtime: {meta.runtime}</span>}
-            {meta.model   && <span>model: {meta.model.split("/").pop()}</span>}
-            {meta.label   && <span>label: {meta.label}</span>}
+            {ms(meta.mode)    && <span>mode: {meta.mode}</span>}
+            {ms(meta.runtime) && <span>runtime: {meta.runtime}</span>}
+            {ms(meta.model)   && <span>model: {ms(meta.model).split("/").pop()}</span>}
+            {ms(meta.label)   && <span>label: {meta.label}</span>}
           </div>
         </div>
       )}
@@ -395,7 +400,7 @@ export function LiveFeed({
                     {/* For agent spawn: show label or task snippet */}
                     {isSpawn && (
                       <span className="text-[10px] text-purple-200/60 truncate max-w-[180px]">
-                        {meta?.label ?? (meta?.task ? (meta.task as string).slice(0, 60) + "…" : "")}
+                        {ms(meta?.label ?? "") || (meta?.task ? (ms(meta.task)).slice(0, 60) + "…" : "")}
                       </span>
                     )}
 
