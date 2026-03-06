@@ -156,6 +156,7 @@ function EventDetail({ event }: { event: Event }) {
   const isLlm             = event.toolName === "llm_call";
   const isSpawn           = event.type === "AGENT_SPAWN";
   const isMessageReceived = event.type === "MESSAGE_RECEIVED";
+  const isCronRun         = event.type === "CRON_RUN";
   const isMessageSent     = event.type === "MESSAGE_SENT" || event.type === "MESSAGE_SEND";
   const isAgentStart      = event.type === "AGENT_START";
   const isSubagentEnd     = event.type === "SUBAGENT_ENDED";
@@ -176,6 +177,25 @@ function EventDetail({ event }: { event: Event }) {
           <span><span className="text-white/15">Sub-agent </span>{event.subAgentId}</span>
         )}
       </div>
+
+      {/* ── Cron Run ── */}
+      {isCronRun && meta && (
+        <div className="mb-2 p-2.5 bg-yellow-500/5 border border-yellow-500/10 rounded-md space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-yellow-400/80 text-xs font-semibold">⏰ Cron Job</span>
+            {ms(meta.trigger) && (
+              <span className="text-[10px] text-yellow-300/40 bg-yellow-500/10 px-1.5 py-0.5 rounded font-mono">
+                trigger: {ms(meta.trigger)}
+              </span>
+            )}
+          </div>
+          {ms(meta.prompt_preview) && (
+            <div className="p-2 bg-black/20 rounded text-[11px] text-white/50 italic leading-relaxed">
+              &ldquo;{ms(meta.prompt_preview)}&rdquo;
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Message Received ── */}
       {isMessageReceived && meta && (
@@ -275,7 +295,7 @@ function EventDetail({ event }: { event: Event }) {
       <JsonBlock data={event.output} label="Output (result)" />
 
       {/* Generic metadata for other types */}
-      {meta && !isSpawn && !isLlm && !isMessageReceived && !isMessageSent && !isAgentStart && !isSubagentEnd &&
+      {meta && !isSpawn && !isLlm && !isMessageReceived && !isMessageSent && !isAgentStart && !isSubagentEnd && !isCronRun &&
         Object.keys(meta).some(k => meta[k] != null) && (
         <JsonBlock data={meta} label="Metadata" />
       )}
@@ -336,6 +356,7 @@ export function LiveFeed({
     : filter === "agents"    ? events.filter(e => ["AGENT_SPAWN","AGENT_START","AGENT_END","SUBAGENT_SPAWNING","SUBAGENT_ENDED"].includes(e.type))
     : filter === "llm"       ? events.filter(e => e.toolName === "llm_call")
     : filter === "messages"  ? events.filter(e => ["MESSAGE_RECEIVED","MESSAGE_SENT","MESSAGE_SEND"].includes(e.type))
+    : filter === "crons"     ? events.filter(e => e.type === "CRON_RUN")
     : filter === "sessions"  ? events.filter(e => ["SESSION_START","SESSION_END"].includes(e.type))
     : events;
 
@@ -344,6 +365,7 @@ export function LiveFeed({
     { id: "tools",    label: "⚡ Tools" },
     { id: "agents",   label: "🤖 Agents" },
     { id: "llm",      label: "✨ LLM" },
+    { id: "crons",    label: "⏰ Crons" },
     { id: "messages", label: "📨 Messages" },
     { id: "sessions", label: "▶️ Sessions" },
     { id: "errors",   label: "🔴 Errors" },
