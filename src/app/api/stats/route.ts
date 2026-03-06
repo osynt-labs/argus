@@ -34,18 +34,6 @@ export async function GET() {
         }),
       ]);
 
-    // costUsd column may not exist yet (migration pending) — fail gracefully
-    let costUsd24h: number | null = null;
-    try {
-      const costStats = await prisma.event.aggregate({
-        where: { timestamp: { gte: h24 }, costUsd: { not: null } },
-        _sum: { costUsd: true },
-      });
-      costUsd24h = costStats._sum.costUsd ?? 0;
-    } catch {
-      // column not migrated yet — return null, UI shows "—"
-    }
-
     return NextResponse.json({
       total,
       last24h,
@@ -54,7 +42,7 @@ export async function GET() {
       byType,
       errorsLast24h,
       tokenStats,
-      costUsd24h,
+      costUsd24h: null, // TODO: add when DB migration pipeline is stable
     });
   } catch (err) {
     console.error("[api/stats] DB query failed:", err);

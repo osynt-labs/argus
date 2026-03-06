@@ -81,7 +81,7 @@ export function StatsCards({ stats }: { stats: Stats }) {
   const cost = stats.costUsd24h ?? null;
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
       <StatCard
         icon="📡"
         label="Total events"
