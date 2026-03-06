@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDashboard } from "../layout";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -55,6 +55,8 @@ export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [timeRange, setTimeRange] = useState<"24" | "72" | "168">("24");
   const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -156,7 +158,7 @@ export default function AnalyticsPage() {
               <h3 className="text-sm font-semibold text-white/50 mb-4">
                 Event Timeline
               </h3>
-              {timelineFormatted.length > 0 ? (
+              {isMounted && timelineFormatted.length > 0 ? (
                 <ResponsiveContainer width="100%" height={240}>
                   <AreaChart data={timelineFormatted} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                     <defs>
@@ -223,7 +225,7 @@ export default function AnalyticsPage() {
                 <h3 className="text-sm font-semibold text-white/50 mb-4">
                   Tool Usage ({timeRange}h)
                 </h3>
-                {toolBreakdown.length > 0 ? (
+                {isMounted && toolBreakdown.length > 0 ? (
                   <ResponsiveContainer width="100%" height={Math.max(200, toolBreakdown.length * 28)}>
                     <BarChart
                       data={toolBreakdown.map((t: any) => ({ name: t.toolName ?? "unknown", count: t._count }))}
@@ -262,7 +264,7 @@ export default function AnalyticsPage() {
                 <h3 className="text-sm font-semibold text-white/50 mb-4">
                   Event Type Distribution
                 </h3>
-                {eventTypes.length > 0 ? (
+                {isMounted && eventTypes.length > 0 ? (
                   <div className="flex items-center gap-4">
                     <div className="w-[180px] h-[180px] shrink-0">
                       <ResponsiveContainer width="100%" height="100%">
