@@ -351,16 +351,16 @@ export function LiveFeed({
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Filter tabs */}
-      <div className="flex items-center gap-1.5 px-3 py-2.5 border-b border-white/5 overflow-x-auto scrollbar-none">
+      {/* Filter tabs - mobile-optimized with touch targets */}
+      <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 sm:py-2.5 border-b border-white/5 overflow-x-auto scrollbar-none">
         {filters.map((f) => (
           <button
             key={f.id}
             onClick={() => { setFilter(f.id); setNewCount(0); }}
-            className={`shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+            className={`shrink-0 px-2.5 sm:px-3 py-2 sm:py-1 rounded-lg text-[11px] sm:text-xs font-medium transition-colors min-h-[36px] sm:min-h-0 ${
               filter === f.id
                 ? "bg-white/10 text-white"
-                : "text-white/30 hover:text-white/60"
+                : "text-white/30 active:text-white/60 sm:hover:text-white/60"
             }`}
           >
             {f.label}
@@ -371,7 +371,7 @@ export function LiveFeed({
             )}
           </button>
         ))}
-        <div className="ml-auto shrink-0 text-[10px] text-white/20">{events.length} events</div>
+        <div className="ml-auto shrink-0 text-[10px] text-white/20 hidden sm:block">{events.length} events</div>
       </div>
 
       {/* Events */}

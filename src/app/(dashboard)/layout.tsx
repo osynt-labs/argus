@@ -201,7 +201,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <DashboardContext.Provider value={{ events, stats, sessions, connState, dbHealthy, lastRefresh }}>
       <div className="flex h-full min-h-screen">
         <Sidebar connState={connState} dbHealthy={dbHealthy} />
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* pb-16 on mobile for bottom nav safe area, lg:pb-0 on desktop */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 lg:pb-0">
           {children}
         </div>
       </div>

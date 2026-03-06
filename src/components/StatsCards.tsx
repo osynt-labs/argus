@@ -53,16 +53,16 @@ function StatCard({
   const trendColor = trend === "up" ? "text-emerald-400" : trend === "down" ? "text-red-400" : "";
 
   return (
-    <div className={`rounded-xl border border-white/[0.06] border-l-2 ${borderColors[color]} ${bgColors[color]} p-3.5 sm:p-4 flex flex-col gap-2`}>
+    <div className={`rounded-xl border border-white/[0.06] border-l-2 ${borderColors[color]} ${bgColors[color]} p-3 sm:p-3.5 flex flex-col gap-1.5 sm:gap-2 min-h-[80px] sm:min-h-0`}>
       <div className="flex items-center justify-between">
         <span className="text-white/30 text-[10px] uppercase tracking-wider font-medium leading-none">{label}</span>
-        <span className="text-base opacity-70">{icon}</span>
+        <span className="text-sm sm:text-base opacity-70">{icon}</span>
       </div>
-      <div className="flex items-end gap-2">
-        <div className={`text-2xl sm:text-3xl font-bold tabular-nums leading-none ${textColors[color]}`}>{value}</div>
+      <div className="flex items-end gap-1.5 sm:gap-2">
+        <div className={`text-xl sm:text-2xl md:text-3xl font-bold tabular-nums leading-none ${textColors[color]}`}>{value}</div>
         {trendIcon && <span className={`text-xs font-semibold mb-0.5 ${trendColor}`}>{trendIcon}</span>}
       </div>
-      {sub && <div className="text-[11px] text-white/25 truncate leading-none">{sub}</div>}
+      {sub && <div className="text-[10px] sm:text-[11px] text-white/25 truncate leading-none">{sub}</div>}
     </div>
   );
 }
