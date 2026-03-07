@@ -39,6 +39,7 @@ model Event {
   inputTokens  Int?
   outputTokens Int?
   cacheTokens  Int?
+  costUsd      Float?
   error        String?
   status       String?   @default("ok")
   metadata     Json?

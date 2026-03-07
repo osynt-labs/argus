@@ -57,6 +57,7 @@ interface SessionSummary {
   totalInputTokens: number;
   totalOutputTokens: number;
   totalCacheTokens: number;
+  totalCostUsd?: number;
 }
 
 type FilterType = "all" | "tools" | "llm" | "errors";
@@ -673,6 +674,9 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
           <StatPill label="In" value={formatTokens(summary?.totalInputTokens)} color="violet" />
           <StatPill label="Out" value={formatTokens(summary?.totalOutputTokens)} color="green" />
           <StatPill label="Duration" value={formatDuration(session.startedAt, session.lastSeenAt)} color="amber" className="col-span-2 sm:col-span-1" />
+          {(summary?.totalCostUsd ?? 0) > 0 && (
+            <StatPill label="Cost" value={`$${(summary!.totalCostUsd!).toFixed(4)}`} color="green" />
+          )}
         </div>
       </div>
 

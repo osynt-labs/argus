@@ -7,7 +7,7 @@ export async function GET() {
     const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const h1 = new Date(now.getTime() - 60 * 60 * 1000);
 
-    const [total, last24h, last1h, byTool, byType, errorsLast24h, tokenStats] =
+    const [total, last24h, last1h, byTool, byType, errorsLast24h, tokenStats, costResult] =
       await Promise.all([
         prisma.event.count(),
         prisma.event.count({ where: { timestamp: { gte: h24 } } }),
@@ -32,6 +32,10 @@ export async function GET() {
           _sum: { inputTokens: true, outputTokens: true, cacheTokens: true },
           _avg: { durationMs: true },
         }),
+        prisma.event.aggregate({
+          where: { timestamp: { gte: h24 } },
+          _sum: { costUsd: true },
+        }),
       ]);
 
     return NextResponse.json({
@@ -42,7 +46,7 @@ export async function GET() {
       byType,
       errorsLast24h,
       tokenStats,
-      costUsd24h: null, // TODO: add when DB migration pipeline is stable
+      costUsd24h: costResult._sum.costUsd ?? 0,
     });
   } catch (err) {
     console.error("[api/stats] DB query failed:", err);

@@ -38,6 +38,7 @@ export async function GET(
         inputTokens: true,
         outputTokens: true,
         cacheTokens: true,
+        costUsd: true,
       },
     });
 
@@ -49,6 +50,14 @@ export async function GET(
         input: tokenTotals._sum.inputTokens ?? 0,
         output: tokenTotals._sum.outputTokens ?? 0,
         cache: tokenTotals._sum.cacheTokens ?? 0,
+      },
+      summary: {
+        eventCount: session._count.events,
+        errorCount,
+        totalInputTokens: tokenTotals._sum.inputTokens ?? 0,
+        totalOutputTokens: tokenTotals._sum.outputTokens ?? 0,
+        totalCacheTokens: tokenTotals._sum.cacheTokens ?? 0,
+        totalCostUsd: tokenTotals._sum.costUsd ?? 0,
       },
     });
   } catch (err) {
