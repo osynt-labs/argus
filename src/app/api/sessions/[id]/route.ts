@@ -10,8 +10,8 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const session = await prisma.session.findUnique({
-      where: { id },
+    const session = await prisma.session.findFirst({
+      where: { OR: [{ id }, { key: id }] },
       include: {
         events: {
           orderBy: { timestamp: "desc" },
