@@ -56,20 +56,43 @@ export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<"24" | "72" | "168">("24");
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => { setIsMounted(true); }, []);
 
-  useEffect(() => {
+  const fetchData = (currentRange: "24" | "72" | "168") => {
     setLoading(true);
     Promise.all([
-      fetch(`/api/analytics/timeline?hours=${timeRange}&bucket=hour`).then((r) => r.json()),
+      fetch(`/api/analytics/timeline?hours=${currentRange}&bucket=hour`).then((r) => r.json()),
       fetch("/api/analytics").then((r) => r.json()),
     ])
       .then(([timelineData, analyticsData]) => {
         setTimeline(timelineData.buckets ?? []);
         setAnalytics(analyticsData);
+        setLastUpdated(new Date());
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+  };
+
+  const handleRefresh = () => {
+    fetchData(timeRange);
+  };
+
+  useEffect(() => {
+    fetchData(timeRange);
+
+    if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
+    refreshIntervalRef.current = setInterval(() => {
+      fetchData(timeRange);
+    }, 30_000);
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
   }, [timeRange]);
 
   const timelineFormatted = timeline.map((b) => ({
@@ -93,24 +116,46 @@ export default function AnalyticsPage() {
             <h1 className="text-lg font-semibold text-white">Analytics</h1>
             <p className="text-xs text-white/30 mt-0.5 hidden sm:block">Trends and insights for OpenClaw activity</p>
           </div>
-          <div className="flex items-center gap-1 bg-white/[0.04] rounded-xl sm:rounded-lg p-1 sm:p-0.5 shrink-0">
-            {[
-              { value: "24" as const, label: "24h" },
-              { value: "72" as const, label: "3d" },
-              { value: "168" as const, label: "7d" },
-            ].map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setTimeRange(opt.value)}
-                className={`px-4 sm:px-3 py-2.5 sm:py-1.5 rounded-lg sm:rounded-md text-sm sm:text-xs font-medium transition-colors min-h-[44px] sm:min-h-0 ${
-                  timeRange === opt.value
-                    ? "bg-white/10 text-white"
-                    : "text-white/30 active:text-white/50 sm:hover:text-white/50"
-                }`}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1 bg-white/[0.04] rounded-xl sm:rounded-lg p-1 sm:p-0.5">
+              {[
+                { value: "24" as const, label: "24h" },
+                { value: "72" as const, label: "3d" },
+                { value: "168" as const, label: "7d" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setTimeRange(opt.value)}
+                  className={`px-4 sm:px-3 py-2.5 sm:py-1.5 rounded-lg sm:rounded-md text-sm sm:text-xs font-medium transition-colors min-h-[44px] sm:min-h-0 ${
+                    timeRange === opt.value
+                      ? "bg-white/10 text-white"
+                      : "text-white/30 active:text-white/50 sm:hover:text-white/50"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {lastUpdated && (
+              <span className="hidden sm:block text-[10px] text-white/20 tabular-nums whitespace-nowrap">
+                Updated {format(lastUpdated, "HH:mm:ss")}
+              </span>
+            )}
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="flex items-center justify-center w-11 h-11 sm:w-8 sm:h-8 rounded-xl sm:rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/30 hover:text-white/60 hover:bg-white/[0.06] disabled:opacity-40 transition-colors"
+            >
+              <svg
+                className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${loading ? "animate-spin" : ""}`}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
               >
-                {opt.label}
-              </button>
-            ))}
+                <path d="M21 2v6h-6M3 12a9 9 0 0115-6.7L21 8M3 22v-6h6M21 12a9 9 0 01-15 6.7L3 16" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
