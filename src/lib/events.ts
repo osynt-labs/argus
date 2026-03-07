@@ -28,7 +28,12 @@ function mapEventType(type: string): EventType {
   const map: Record<string, EventType> = {
     tool_call: EventType.TOOL_CALL,
     message_send: EventType.MESSAGE_SEND,
+    message_sent: EventType.MESSAGE_SENT,
+    message_received: EventType.MESSAGE_RECEIVED,
     agent_spawn: EventType.AGENT_SPAWN,
+    agent_start: EventType.AGENT_START,
+    agent_end: EventType.AGENT_END,
+    llm_output: EventType.LLM_OUTPUT,
     cron_run: EventType.CRON_RUN,
     error: EventType.ERROR,
     session_start: EventType.SESSION_START,
