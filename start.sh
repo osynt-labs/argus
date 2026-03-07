@@ -1,44 +1,39 @@
 #!/bin/sh
 set -e
 
-echo "[startup] Running DB migrations..."
-node -e "
-const { Client } = require('pg');
+# ──────────────────────────────────────────────────────────────────────────────
+# Wait for Cloud SQL Auth Proxy (sidecar) to be ready before running migrations.
+# The proxy needs a few seconds to establish its Unix socket / TCP listener.
+# ──────────────────────────────────────────────────────────────────────────────
+echo "[startup] Waiting for Cloud SQL proxy..."
+for i in $(seq 1 15); do
+  if node -e "
+    const net = require('net');
+    const s = net.createConnection({ host: '127.0.0.1', port: 5432 });
+    s.on('connect', () => { s.destroy(); process.exit(0); });
+    s.on('error', () => { s.destroy(); process.exit(1); });
+  " 2>/dev/null; then
+    echo "[startup] DB ready after ${i}s."
+    break
+  fi
+  if [ "$i" -eq 15 ]; then
+    echo "[startup] DB not reachable after 15s — proceeding anyway."
+  fi
+  sleep 1
+done
 
-async function main() {
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
-  await client.connect();
-
-  const migrations = [
-    // 0001: initial schema — handled by prisma migrate deploy below
-    // 0002: add missing EventType enum values
-    \`ALTER TYPE \"EventType\" ADD VALUE IF NOT EXISTS 'MESSAGE_SENT'\`,
-    \`ALTER TYPE \"EventType\" ADD VALUE IF NOT EXISTS 'MESSAGE_RECEIVED'\`,
-    \`ALTER TYPE \"EventType\" ADD VALUE IF NOT EXISTS 'AGENT_START'\`,
-    \`ALTER TYPE \"EventType\" ADD VALUE IF NOT EXISTS 'AGENT_END'\`,
-    \`ALTER TYPE \"EventType\" ADD VALUE IF NOT EXISTS 'LLM_OUTPUT'\`,
-  ];
-
-  for (const sql of migrations) {
-    try {
-      await client.query(sql);
-      console.log('[startup] OK:', sql.slice(0, 60));
-    } catch (e) {
-      // IF NOT EXISTS means this is safe to ignore duplicates
-      if (!e.message.includes('already exists')) {
-        console.warn('[startup] Migration warning:', e.message);
-      }
-    }
-  }
-
-  await client.end();
-  console.log('[startup] Migrations complete.');
-}
-
-main().catch(e => {
-  console.warn('[startup] Migration error (non-fatal):', e.message);
-});
-"
+# ──────────────────────────────────────────────────────────────────────────────
+# Run Prisma migrations.
+# Using the full package path — the standalone build doesn't include the npx
+# shim's dependencies, so we call the CLI entry point directly.
+# ──────────────────────────────────────────────────────────────────────────────
+echo "[startup] Running Prisma migrations..."
+if node /app/node_modules/prisma/build/index.js migrate deploy; then
+  echo "[startup] Migrations complete."
+else
+  echo "[startup] Migration failed — aborting startup." >&2
+  exit 1
+fi
 
 echo "[startup] Starting server..."
 exec node server.js
