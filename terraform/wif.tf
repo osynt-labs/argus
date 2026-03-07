@@ -19,7 +19,7 @@ resource "google_iam_workload_identity_pool_provider" "argus_github_provider" {
   workload_identity_pool_provider_id = "argus-github-provider"
   display_name                       = "Argus GitHub OIDC"
 
-  attribute_condition = "assertion.repository == \"osynt-labs/argus\""
+  attribute_condition = "assertion.repository in [\"osynt-labs/argus\", \"osynt-labs/web-scrapers\"]"
 
   attribute_mapping = {
     "google.subject"       = "assertion.sub"
@@ -71,4 +71,11 @@ output "wif_provider" {
 output "wif_service_account_email" {
   description = "Set as WIF_SERVICE_ACCOUNT secret in GitHub repo settings"
   value       = google_service_account.argus_github_ci.email
+}
+
+# Allow web-scrapers CI to use the same WIF pool and SA
+resource "google_service_account_iam_member" "wif_sa_binding_web_scrapers" {
+  service_account_id = google_service_account.argus_github_ci.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.argus_github_pool.name}/attribute.repository/osynt-labs/web-scrapers"
 }
