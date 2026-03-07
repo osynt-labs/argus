@@ -77,6 +77,8 @@ const TYPE_ICONS: Record<string, string> = {
   CRON_RUN: "⏰",
   ERROR: "❌",
   MODEL_SWITCH: "🔄",
+  SUBAGENT_SPAWNING: "🤖",
+  SUBAGENT_ENDED: "🏁",
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -93,6 +95,8 @@ const TYPE_COLORS: Record<string, string> = {
   SESSION_START: "bg-emerald-500/20 text-emerald-300 border-emerald-500/20",
   SESSION_END: "bg-zinc-500/20 text-zinc-300 border-zinc-500/20",
   MODEL_SWITCH: "bg-pink-500/20 text-pink-300 border-pink-500/20",
+  SUBAGENT_SPAWNING: "bg-orange-500/20 text-orange-300 border-orange-500/20",
+  SUBAGENT_ENDED: "bg-amber-500/20 text-amber-300 border-amber-500/20",
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -109,6 +113,8 @@ const TYPE_LABELS: Record<string, string> = {
   SESSION_START: "Start",
   SESSION_END: "End",
   MODEL_SWITCH: "Switch",
+  SUBAGENT_SPAWNING: "Sub-agent Start",
+  SUBAGENT_ENDED: "Sub-agent End",
 };
 
 function formatDuration(startedAt?: string, lastSeenAt?: string): string {
@@ -668,15 +674,17 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Stats */}
       <div className="shrink-0 px-4 sm:px-6 py-3 border-b border-white/[0.06]">
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
           <StatPill label="Events" value={(summary?.eventCount ?? session.totalEvents).toLocaleString()} color="blue" />
           <StatPill label="Errors" value={String(summary?.errorCount ?? session.totalErrors)} color={(summary?.errorCount ?? session.totalErrors) > 0 ? "red" : "zinc"} />
           <StatPill label="In" value={formatTokens(summary?.totalInputTokens)} color="violet" />
           <StatPill label="Out" value={formatTokens(summary?.totalOutputTokens)} color="green" />
-          <StatPill label="Duration" value={formatDuration(session.startedAt, session.lastSeenAt)} color="amber" className="col-span-2 sm:col-span-1" />
-          {(summary?.totalCostUsd ?? 0) > 0 && (
-            <StatPill label="Cost" value={`$${(summary!.totalCostUsd!).toFixed(4)}`} color="green" />
-          )}
+          <StatPill label="Duration" value={formatDuration(session.startedAt, session.lastSeenAt)} color="amber" />
+          <StatPill
+            label="Cost"
+            value={summary?.totalCostUsd != null && summary.totalCostUsd > 0 ? `$${summary.totalCostUsd.toFixed(4)}` : "$0.0000"}
+            color={summary?.totalCostUsd != null && summary.totalCostUsd > 0 ? "green" : "zinc"}
+          />
         </div>
       </div>
 
