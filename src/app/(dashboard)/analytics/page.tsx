@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useDashboard } from "../layout";
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
+  AreaChart, Area, BarChart, Bar, ComposedChart, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Cell, PieChart, Pie, CartesianGrid,
 } from "recharts";
 import { format } from "date-fns";
@@ -99,6 +99,17 @@ export default function AnalyticsPage() {
     ...b,
     label: format(new Date(b.time), timeRange === "168" ? "EEE HH:mm" : "HH:mm"),
   }));
+
+  // Peak error rate bucket (only where total > 0 and errors > 0)
+  const peakErrorBucket = timelineFormatted.reduce<typeof timelineFormatted[0] | null>(
+    (best, b) => {
+      if (b.total <= 0 || b.errors <= 0) return best;
+      if (!best || b.errors / b.total > best.errors / best.total) return b;
+      return best;
+    },
+    null,
+  );
+  const hasErrors = peakErrorBucket !== null && peakErrorBucket.errors > 0;
 
   // Derive event type breakdown from context if analytics API hasn't loaded
   const eventTypes = analytics?.eventTypeBreakdown ??
@@ -207,15 +218,11 @@ export default function AnalyticsPage() {
                 <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                   <div className="min-w-[600px] sm:min-w-0">
                     <ResponsiveContainer width="100%" height={180} className="sm:!h-[240px]">
-                      <AreaChart data={timelineFormatted} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                      <ComposedChart data={timelineFormatted} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                         <defs>
                           <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
                             <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                          </linearGradient>
-                          <linearGradient id="gradErrors" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.3} />
-                            <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
@@ -243,14 +250,6 @@ export default function AnalyticsPage() {
                         />
                         <Area
                           type="monotone"
-                          dataKey="errors"
-                          name="Errors"
-                          stroke="#ef4444"
-                          fill="url(#gradErrors)"
-                          strokeWidth={1.5}
-                        />
-                        <Area
-                          type="monotone"
                           dataKey="tools"
                           name="Tool Calls"
                           stroke="#10b981"
@@ -258,8 +257,29 @@ export default function AnalyticsPage() {
                           strokeWidth={1}
                           strokeDasharray="4 2"
                         />
-                      </AreaChart>
+                        {/* Errors as Bar so we can dynamically colour spike buckets with Cell */}
+                        <Bar dataKey="errors" name="Errors" maxBarSize={16} radius={[2, 2, 0, 0]}>
+                          {timelineFormatted.map((bucket, i) => {
+                            const isSpike = bucket.total > 0 && bucket.errors / bucket.total > 0.1;
+                            return (
+                              <Cell
+                                key={i}
+                                fill={isSpike ? "#ef4444" : "rgba(239,68,68,0.4)"}
+                                fillOpacity={isSpike ? 1 : 0.8}
+                              />
+                            );
+                          })}
+                        </Bar>
+                      </ComposedChart>
                     </ResponsiveContainer>
+                    {/* Peak error rate summary */}
+                    {hasErrors && peakErrorBucket && (
+                      <div className="text-xs text-white/30 text-center mt-1">
+                        Peak error rate:{" "}
+                        {((peakErrorBucket.errors / peakErrorBucket.total) * 100).toFixed(1)}% at{" "}
+                        {format(new Date(peakErrorBucket.time), "HH:mm")}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (

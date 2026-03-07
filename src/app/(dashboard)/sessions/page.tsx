@@ -21,6 +21,10 @@ function formatDuration(startedAt?: string, lastSeenAt?: string): string {
   return parts.join(" ");
 }
 
+function isActiveSession(lastSeenAt: string): boolean {
+  return Date.now() - new Date(lastSeenAt).getTime() < 3 * 60 * 1000;
+}
+
 function formatTokens(n?: number): string {
   if (n == null || n === 0) return "0";
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -275,7 +279,7 @@ function SessionCard({
   maxEvents: number;
 }) {
   const progressPct = Math.round((session.totalEvents / maxEvents) * 100);
-  const isActiveNow = Date.now() - new Date(session.lastSeenAt).getTime() < 5 * 60 * 1000; // 5 min
+  const isActiveNow = isActiveSession(session.lastSeenAt);
 
   return (
     <Link
@@ -290,10 +294,8 @@ function SessionCard({
         {/* Left: identity */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            {isActiveNow && (
-              <span className="flex items-center gap-1 shrink-0">
-                <span className="w-2 h-2 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              </span>
+            {isActiveSession(session.lastSeenAt) && (
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" title="Active now" />
             )}
             <span className="text-base sm:text-sm font-mono font-medium text-white/80 truncate">
               {session.key ?? session.id.slice(0, 14) + "\u2026"}

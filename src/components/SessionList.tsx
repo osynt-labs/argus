@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 
 interface Session {
@@ -28,9 +29,10 @@ export function SessionList({ sessions }: { sessions: Session[] }) {
       ) : (
         <div className="space-y-2">
           {sessions.map((s) => (
-            <div
+            <Link
               key={s.id}
-              className="flex items-center justify-between p-3 rounded-lg bg-white/3 hover:bg-white/5 active:bg-white/6 transition-colors cursor-default"
+              href={`/sessions/${s.id}`}
+              className="flex items-center justify-between p-3 rounded-lg bg-white/3 hover:bg-white/[0.07] active:bg-white/[0.06] transition-colors cursor-pointer"
             >
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-mono text-white/70 truncate">
@@ -50,7 +52,7 @@ export function SessionList({ sessions }: { sessions: Session[] }) {
                   <div className="text-[10px] text-red-400/60">{s.totalErrors} err</div>
                 )}
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}

@@ -625,23 +625,35 @@ export default function EventsPage() {
         </div>
       </div>
 
-      {/* ── Mini stats bar (hidden on mobile) ────────────────────── */}
-      {filteredEvents.length > 0 && (
-        <div className="hidden sm:flex shrink-0 px-4 sm:px-6 py-2 border-b border-white/[0.04] bg-white/[0.01] items-center gap-4 overflow-x-auto scrollbar-none">
-          {[
-            { label: "Tool calls", count: filteredEvents.filter(e => e.type === "TOOL_CALL").length, color: "text-blue-400" },
-            { label: "Messages", count: filteredEvents.filter(e => ["MESSAGE_SEND","MESSAGE_SENT","MESSAGE_RECEIVED"].includes(e.type)).length, color: "text-green-400" },
-            { label: "LLM calls", count: filteredEvents.filter(e => e.toolName === "llm_call").length, color: "text-indigo-400" },
-            { label: "Agent events", count: filteredEvents.filter(e => ["AGENT_SPAWN","AGENT_START","AGENT_END","SUBAGENT_SPAWNING","SUBAGENT_ENDED"].includes(e.type)).length, color: "text-purple-400" },
-            { label: "Errors", count: filteredEvents.filter(e => e.status === "error" || !!e.error).length, color: "text-red-400" },
-          ].map(({ label, count, color }) => count > 0 && (
-            <div key={label} className="flex items-center gap-1.5 shrink-0">
-              <span className={`text-xs font-bold tabular-nums ${color}`}>{count.toLocaleString()}</span>
-              <span className="text-[10px] text-white/20">{label}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* ── Stats / count bar ────────────────────────────────────── */}
+      <div className="shrink-0 px-4 sm:px-6 py-2 border-b border-white/[0.04] bg-white/[0.01] flex items-center gap-4 overflow-x-auto scrollbar-none">
+        {/* Showing X of Y */}
+        <span className="text-[11px] text-white/30 tabular-nums shrink-0">
+          Showing{" "}
+          <span className="text-white/50 font-medium">{filteredEvents.length.toLocaleString()}</span>
+          {" "}of{" "}
+          <span className="text-white/50 font-medium">{allEvents.length.toLocaleString()}</span>
+          {" "}events
+        </span>
+
+        {/* Breakdown stats (desktop only) */}
+        {filteredEvents.length > 0 && (
+          <div className="hidden sm:flex items-center gap-4 overflow-x-auto scrollbar-none">
+            {[
+              { label: "Tool calls", count: filteredEvents.filter(e => e.type === "TOOL_CALL").length, color: "text-blue-400" },
+              { label: "Messages", count: filteredEvents.filter(e => ["MESSAGE_SEND","MESSAGE_SENT","MESSAGE_RECEIVED"].includes(e.type)).length, color: "text-green-400" },
+              { label: "LLM calls", count: filteredEvents.filter(e => e.toolName === "llm_call").length, color: "text-indigo-400" },
+              { label: "Agent events", count: filteredEvents.filter(e => ["AGENT_SPAWN","AGENT_START","AGENT_END","SUBAGENT_SPAWNING","SUBAGENT_ENDED"].includes(e.type)).length, color: "text-purple-400" },
+              { label: "Errors", count: filteredEvents.filter(e => e.status === "error" || !!e.error).length, color: "text-red-400" },
+            ].map(({ label, count, color }) => count > 0 && (
+              <div key={label} className="flex items-center gap-1.5 shrink-0">
+                <span className={`text-xs font-bold tabular-nums ${color}`}>{count.toLocaleString()}</span>
+                <span className="text-[10px] text-white/20">{label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* ── Events list ──────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
