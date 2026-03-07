@@ -21,6 +21,7 @@ const TYPE_BADGE: Record<string, string> = {
   SESSION_START:    "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
   SESSION_END:      "bg-gray-500/15    text-gray-400    border-gray-500/20",
   MODEL_SWITCH:     "bg-cyan-500/15    text-cyan-300    border-cyan-500/20",
+  LLM_OUTPUT:       "bg-violet-500/15  text-violet-300  border-violet-500/20",
 };
 
 // Left border accent per event type
@@ -39,6 +40,7 @@ const TYPE_BORDER: Record<string, string> = {
   SESSION_START:     "border-l-emerald-500/40",
   SESSION_END:       "border-l-gray-500/20",
   MODEL_SWITCH:      "border-l-cyan-500/40",
+  LLM_OUTPUT:        "border-l-violet-500/50",
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -50,6 +52,7 @@ const TYPE_LABELS: Record<string, string> = {
   SESSION_START: "Session Start",
   SESSION_END: "Session End",
   MODEL_SWITCH: "Model Switch",
+  LLM_OUTPUT:   "LLM Output",
 };
 
 const ALL_TYPES = Object.keys(TYPE_LABELS);
