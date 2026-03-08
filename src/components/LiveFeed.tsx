@@ -154,6 +154,131 @@ const ms = (v: unknown): string => v != null ? String(v) : "";
 const mn = (v: unknown): number => typeof v === "number" ? v : Number(v ?? 0);
 const mb = (v: unknown): boolean => Boolean(v);
 
+// ── Inline preview helpers ────────────────────────────────────────────────────
+
+function parseJsonVal(val: unknown): unknown {
+  if (val == null) return null;
+  if (typeof val === "object") return val;
+  if (typeof val === "string") {
+    try { return JSON.parse(val); } catch { return val; }
+  }
+  return val;
+}
+
+function strVal(val: unknown): string {
+  if (val == null) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "object") return JSON.stringify(val);
+  return String(val);
+}
+
+function truncStr(str: string, len: number): string {
+  return str.length <= len ? str : str.slice(0, len) + "…";
+}
+
+/** Returns a short preview string for an event, or null if nothing to show. */
+function getEventPreview(ev: Event): string | null {
+  const { type, toolName, input, output, error, metadata: meta } = ev;
+
+  // TOOL_CALL: 🔧 tool_name(key: "val", …) → output preview
+  if (type === "TOOL_CALL" && toolName) {
+    const parsedInput = parseJsonVal(input);
+    let argPreview = "";
+    if (parsedInput && typeof parsedInput === "object" && !Array.isArray(parsedInput)) {
+      const entries = Object.entries(parsedInput as Record<string, unknown>).slice(0, 3);
+      argPreview = entries.map(([k, v]) => {
+        const vStr = typeof v === "string"
+          ? `"${truncStr(v, 20)}"`
+          : truncStr(strVal(v), 20);
+        return `${k}: ${vStr}`;
+      }).join(", ");
+    } else if (parsedInput != null) {
+      argPreview = truncStr(strVal(parsedInput), 40);
+    }
+    const parsedOutput = parseJsonVal(output);
+    const outStr = parsedOutput != null ? truncStr(strVal(parsedOutput).replace(/\n/g, " "), 80) : "";
+    const inputPart = `🔧 ${toolName}(${argPreview})`;
+    return outStr ? `${inputPart} → ${outStr}` : inputPart;
+  }
+
+  // LLM_OUTPUT / llm_call: beginning of output text
+  if (type === "LLM_OUTPUT" || toolName === "llm_call") {
+    const parsedOutput = parseJsonVal(output);
+    if (parsedOutput != null) {
+      const s = strVal(parsedOutput).replace(/\n/g, " ").trim();
+      if (s) return "✨ " + truncStr(s, 100);
+    }
+    return null;
+  }
+
+  // MESSAGE_RECEIVED: beginning of message
+  if (type === "MESSAGE_RECEIVED") {
+    const preview = meta?.content_preview;
+    if (preview) return "📨 " + truncStr(ms(preview), 100);
+    const parsed = parseJsonVal(input);
+    if (parsed != null) return "📨 " + truncStr(strVal(parsed).replace(/\n/g, " "), 100);
+    return null;
+  }
+
+  // MESSAGE_SENT / MESSAGE_SEND: beginning of response
+  if (type === "MESSAGE_SENT" || type === "MESSAGE_SEND") {
+    const preview = meta?.content_preview;
+    if (preview) return "📤 " + truncStr(ms(preview), 100);
+    const parsed = parseJsonVal(output);
+    if (parsed != null) return "📤 " + truncStr(strVal(parsed).replace(/\n/g, " "), 100);
+    return null;
+  }
+
+  // CRON_RUN: cron trigger + status
+  if (type === "CRON_RUN") {
+    const cronName = ms(meta?.trigger ?? meta?.cron_name ?? "");
+    const status   = ev.status ?? "";
+    if (cronName) return `⏰ ${cronName}${status ? ` · ${status}` : ""}`;
+    return null;
+  }
+
+  // AGENT_SPAWN: label + task preview
+  if (type === "AGENT_SPAWN") {
+    const label = ms(meta?.label ?? "");
+    const task  = ms(meta?.task ?? "");
+    if (label) return `🤖 ${label}${task ? " · " + truncStr(task, 60) : ""}`;
+    if (task)  return `🤖 ${truncStr(task, 80)}`;
+    return null;
+  }
+
+  // ERROR: error message
+  if (type === "ERROR" || error) {
+    const errMsg = error || ms((meta as Record<string, unknown>)?.error ?? "");
+    if (errMsg) return "🔴 " + truncStr(errMsg, 80);
+    return null;
+  }
+
+  return null;
+}
+
+/** Inline preview row with optional expand for long previews. */
+function EventInlinePreview({ preview }: { preview: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const SHORT_LEN = 120;
+  const isLong = preview.length > SHORT_LEN;
+  const displayed = !expanded && isLong ? truncStr(preview, SHORT_LEN) : preview;
+
+  return (
+    <p className="text-xs text-muted-foreground mt-0.5 font-mono leading-snug break-all">
+      <span className="sm:hidden">{isLong && !expanded ? truncStr(preview, 60) : displayed}</span>
+      <span className="hidden sm:inline">{displayed}</span>
+      {isLong && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+          className="ml-1.5 text-[9px] text-blue-400/60 hover:text-blue-300 transition-colors align-middle"
+        >
+          {expanded ? "▲ less" : "▼ more"}
+        </button>
+      )}
+    </p>
+  );
+}
+
 function EventDetail({ event }: { event: Event }) {
   const meta = event.metadata;
   const isLlm             = event.toolName === "llm_call";
@@ -440,12 +565,13 @@ export function LiveFeed({
         )}
 
         {filtered.map((ev) => {
-          const isLlm   = ev.toolName === "llm_call";
-          const isSpawn = ev.type === "AGENT_SPAWN";
-          const meta    = ev.metadata;
-          const badgeCls = isLlm ? LLM_BADGE : (TYPE_BADGE[ev.type] ?? "bg-white/5 text-white/30 border-white/5");
+          const isLlm      = ev.toolName === "llm_call";
+          const isSpawn    = ev.type === "AGENT_SPAWN";
+          const meta       = ev.metadata;
+          const badgeCls   = isLlm ? LLM_BADGE : (TYPE_BADGE[ev.type] ?? "bg-white/5 text-white/30 border-white/5");
           const badgeLabel = isLlm ? "LLM CALL" : ev.type.replace(/_/g, " ");
-          const hasDetail = ev.input != null || ev.output != null || isSpawn || isLlm;
+          const hasDetail  = ev.input != null || ev.output != null || isSpawn || isLlm;
+          const preview    = getEventPreview(ev);
 
           return (
             <div key={ev.id}>
@@ -504,6 +630,9 @@ export function LiveFeed({
                       </span>
                     )}
                   </div>
+
+                  {/* Inline preview */}
+                  {preview && <EventInlinePreview preview={preview} />}
 
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     {ev.durationMs != null && (
