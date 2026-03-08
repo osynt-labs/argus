@@ -333,12 +333,17 @@ export function LiveFeed({
   externalEvents?: Event[];
   onConnectionChange?: (connected: boolean) => void;
 }) {
-  const [ownEvents,  setOwnEvents]  = useState<Event[]>(initialEvents);
-  const [connected,  setConnected]  = useState(false);
-  const [filter,     setFilter]     = useState<string>("all");
-  const [newCount,   setNewCount]   = useState(0);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const topRef = useRef<HTMLDivElement>(null);
+  const [ownEvents,    setOwnEvents]    = useState<Event[]>(initialEvents);
+  const [connected,    setConnected]    = useState(false);
+  const [filter,       setFilter]       = useState<string>("all");
+  const [newCount,     setNewCount]     = useState(0);
+  const [expandedId,   setExpandedId]   = useState<string | null>(null);
+  const [atTop,        setAtTop]        = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
+  const topRef               = useRef<HTMLDivElement>(null);
+  const atTopRef             = useRef(true);
+  const prevFilteredLenRef   = useRef(0);
+  const justChangedFilterRef = useRef(false);
 
   // Use external events if provided (from dashboard layout context), otherwise manage own SSE
   const events = externalEvents ?? ownEvents;
@@ -361,6 +366,23 @@ export function LiveFeed({
     };
     return () => es.close();
   }, [setConn, externalEvents]);
+
+  // Detect whether user is at the top of the feed (within 200 px)
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const isAtTop = e.currentTarget.scrollTop <= 200;
+    atTopRef.current = isAtTop;
+    setAtTop(isAtTop);
+  }, []);
+
+  // When filter changes: reset pending banner, scroll to top, set guard flag
+  useEffect(() => {
+    setPendingCount(0);
+    atTopRef.current = true;
+    setAtTop(true);
+    topRef.current?.scrollTo({ top: 0 });
+    justChangedFilterRef.current = true;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
 
   const filtered = filter === "all"      ? events
     : filter === "errors"    ? events.filter(e => e.status === "error" || !!e.error)
