@@ -6,6 +6,27 @@ import { ToolChart } from "@/components/ToolChart";
 import { LiveFeed } from "@/components/LiveFeed";
 import { SessionList } from "@/components/SessionList";
 
+function StatsCardSkeleton() {
+  return (
+    <div className="rounded-xl border border-white/[0.06] border-l-2 border-l-white/10 bg-white/[0.02] p-3 sm:p-3.5 flex flex-col gap-1.5 sm:gap-2 min-h-[80px] sm:min-h-0">
+      <div className="flex items-center justify-between">
+        <div className="h-2.5 w-20 rounded-full bg-white/[0.06] animate-pulse" />
+        <div className="h-4 w-4 rounded bg-white/[0.04] animate-pulse" />
+      </div>
+      <div className="h-7 w-16 rounded-lg bg-white/[0.06] animate-pulse" />
+      <div className="h-2 w-24 rounded-full bg-white/[0.04] animate-pulse" />
+    </div>
+  );
+}
+
+function StatsCardsSkeleton() {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+      {Array.from({ length: 6 }).map((_, i) => <StatsCardSkeleton key={i} />)}
+    </div>
+  );
+}
+
 export default function OverviewPage() {
   const { stats, events, sessions, connState, dbHealthy, lastRefresh } = useDashboard();
 
@@ -83,14 +104,7 @@ export default function OverviewPage() {
               </>
             )}
 
-            {!stats && (
-              <div className="flex items-center justify-center h-40">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-6 h-6 border-2 border-white/10 border-t-blue-400 rounded-full animate-spin" />
-                  <span className="text-xs text-white/30">Loading data...</span>
-                </div>
-              </div>
-            )}
+            {!stats && <StatsCardsSkeleton />}
           </div>
         </div>
 
@@ -137,14 +151,7 @@ export default function OverviewPage() {
                 </div>
               </>
             )}
-            {!stats && (
-              <div className="flex items-center justify-center h-40">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-6 h-6 border-2 border-white/10 border-t-blue-400 rounded-full animate-spin" />
-                  <span className="text-xs text-white/30">Loading data...</span>
-                </div>
-              </div>
-            )}
+            {!stats && <StatsCardsSkeleton />}
           </div>
         </div>
       </div>

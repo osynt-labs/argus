@@ -94,6 +94,16 @@ function CustomTooltip({ active, payload, label }: any) {
   );
 }
 
+function formatDuration(ms: number): string {
+  if (ms >= 60000) {
+    return `${Math.floor(ms / 60000)}m ${Math.round((ms % 60000) / 1000)}s`;
+  } else if (ms >= 1000) {
+    return `${(ms / 1000).toFixed(1)}s`;
+  } else {
+    return `${Math.round(ms)}ms`;
+  }
+}
+
 export default function AnalyticsPage() {
   const { stats, events } = useDashboard();
   const router = useRouter();
@@ -289,7 +299,8 @@ export default function AnalyticsPage() {
                 />
                 <SummaryCard
                   label="Avg Latency"
-                  value={(stats as any)?.tokenStats?._avg?.durationMs ? `${Math.round((stats as any).tokenStats._avg.durationMs)}ms` : "—"}
+                  value={(stats as any)?.tokenStats?._avg?.durationMs ? formatDuration((stats as any).tokenStats._avg.durationMs) : "—"}
+                  sub="avg tool call"
                   color="green"
                 />
               </div>
