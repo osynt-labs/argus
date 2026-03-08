@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
+import Link from "next/link";
 
 interface EventMeta {
   cost_usd?:            number | null;
@@ -170,7 +171,16 @@ function EventDetail({ event }: { event: Event }) {
     >
       {/* Metadata row */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-white/30 font-mono mb-2">
-        <span><span className="text-white/15">Session </span>{event.sessionId}</span>
+        <span>
+          <span className="text-white/15">Session </span>
+          <Link
+            href={`/sessions/${event.sessionId}`}
+            className="hover:text-blue-400/70 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {event.sessionId}
+          </Link>
+        </span>
         <span><span className="text-white/15">Time </span>{new Date(event.timestamp).toISOString()}</span>
         {event.durationMs != null && (
           <span><span className="text-white/15">Duration </span>{event.durationMs}ms</span>
@@ -500,7 +510,13 @@ export function LiveFeed({
                   </div>
 
                   <div className="mt-0.5 flex items-center gap-2 text-[10px] text-white/15 font-mono">
-                    <span>{ev.sessionId.slice(0, 8)}…</span>
+                    <Link
+                      href={`/sessions/${ev.sessionId}`}
+                      className="font-mono text-white/35 hover:text-blue-400/70 transition-colors truncate text-[11px] tabular-nums min-h-[44px] flex items-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {ev.sessionId.slice(0, 8)}…
+                    </Link>
                     <span className="text-white/10">·</span>
                     <span className="tabular-nums">
                       {new Date(ev.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}

@@ -19,8 +19,8 @@ interface TimelineBucket {
 
 interface AnalyticsData {
   toolBreakdown: { toolName: string; _count: number; errorCount?: number; avgDuration?: number }[];
-  modelBreakdown: { model: string; _count: number; tokens?: number }[];
-  eventTypeBreakdown: { type: string; _count: number }[];
+  modelBreakdown: { model: string; _count?: number; count?: number; tokens?: number; inputTokens?: number; outputTokens?: number }[];
+  eventTypeBreakdown: { type: string; _count?: number; count?: number }[];
   errorRate: { total: number; errors: number; rate: number };
   peakHour?: { hour: number; count: number };
 }
@@ -194,7 +194,7 @@ export default function AnalyticsPage() {
                 <SummaryCard
                   label="Errors"
                   value={analytics.errorRate.errors.toLocaleString()}
-                  sub={`${analytics.errorRate.rate.toFixed(1)}% rate`}
+                  sub={`${(analytics.errorRate.rate * 100).toFixed(1)}% rate`}
                   color="red"
                 />
                 <SummaryCard
@@ -347,7 +347,7 @@ export default function AnalyticsPage() {
                           <Pie
                             data={eventTypes.map((t: any) => ({
                               name: TYPE_LABELS[t.type] ?? t.type,
-                              value: t._count,
+                              value: t._count ?? t.count ?? 0,
                             }))}
                             cx="50%"
                             cy="50%"
@@ -374,7 +374,7 @@ export default function AnalyticsPage() {
                           <span className="text-sm sm:text-xs text-white/50 flex-1 truncate">
                             {TYPE_LABELS[t.type] ?? t.type}
                           </span>
-                          <span className="text-sm sm:text-xs font-mono text-white/30">{t._count}</span>
+                          <span className="text-sm sm:text-xs font-mono text-white/30">{t._count ?? t.count ?? 0}</span>
                         </div>
                       ))}
                     </div>
@@ -406,8 +406,8 @@ export default function AnalyticsPage() {
                           {m.model?.split("/").pop() ?? "unknown"}
                         </div>
                         <div className="text-xs sm:text-[10px] text-white/30">
-                          {m._count} calls
-                          {m.tokens ? ` · ${(m.tokens / 1000).toFixed(1)}k tokens` : ""}
+                          {m.count ?? m._count ?? 0} calls
+                          {(m.inputTokens != null || m.tokens) ? ` · ${((m.inputTokens != null ? (m.inputTokens ?? 0) + (m.outputTokens ?? 0) : (m.tokens ?? 0)) / 1000).toFixed(1)}k tokens` : ""}
                         </div>
                       </div>
                     </div>
