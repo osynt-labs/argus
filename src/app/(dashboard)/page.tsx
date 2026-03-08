@@ -169,11 +169,11 @@ export default function OverviewPage() {
   // System health
   const isHealthy  = dbHealthy && connState === "connected" && (parseFloat(errorRate ?? "0") < 10);
   const isDegraded = !dbHealthy || parseFloat(errorRate ?? "0") >= 10;
-  const statusLabel = !dbHealthy ? "DB Issues" : connState !== "open" ? "Disconnected" : isDegraded ? "Degraded" : "Operational";
+  const statusLabel = !dbHealthy ? "DB Issues" : connState !== "connected" ? "Disconnected" : isDegraded ? "Degraded" : "Operational";
   const statusColor = isDegraded ? "text-red-400 bg-red-500/10 border-red-500/25"
-    : connState !== "open"       ? "text-yellow-400 bg-yellow-500/10 border-yellow-500/25"
+    : connState !== "connected"       ? "text-yellow-400 bg-yellow-500/10 border-yellow-500/25"
     :                              "text-emerald-400 bg-emerald-500/10 border-emerald-500/25";
-  const statusDot = isDegraded ? "bg-red-400" : connState !== "open" ? "bg-yellow-400 animate-pulse" : "bg-emerald-400";
+  const statusDot = isDegraded ? "bg-red-400" : connState !== "connected" ? "bg-yellow-400 animate-pulse" : "bg-emerald-400";
 
   const toolData = stats?.byTool ?? [];
   const maxTool  = toolData[0]
