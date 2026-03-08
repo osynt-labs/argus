@@ -33,6 +33,13 @@ function formatTokens(n?: number): string {
   return String(n);
 }
 
+function formatCost(n?: number | null): string {
+  if (n == null || n === 0) return "—";
+  if (n < 0.001) return `$${(n * 1000).toFixed(3)}m`;
+  if (n < 0.01) return `$${n.toFixed(4)}`;
+  return `$${n.toFixed(2)}`;
+}
+
 export default function SessionsPage() {
   const { sessions: contextSessions } = useDashboard();
   const [search, setSearch] = useState("");
@@ -393,6 +400,20 @@ function SessionCard({
           <div className="text-[11px] sm:text-[10px] text-white/25 mb-1 sm:mb-0.5">Tokens</div>
           <span className="text-sm sm:text-xs font-mono text-white/40 tabular-nums">
             {formatTokens(session.totalTokens)}
+          </span>
+        </div>
+
+        {/* Cost */}
+        <div className="text-center shrink-0 w-16 sm:w-14">
+          <div className="text-[11px] sm:text-[10px] text-white/25 mb-1 sm:mb-0.5">Cost</div>
+          <span
+            className={`text-sm sm:text-xs font-mono font-semibold tabular-nums ${
+              session.totalCostUsd && session.totalCostUsd > 0
+                ? "text-emerald-400"
+                : "text-white/20"
+            }`}
+          >
+            {formatCost(session.totalCostUsd)}
           </span>
         </div>
 

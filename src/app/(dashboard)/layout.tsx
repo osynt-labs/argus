@@ -51,6 +51,7 @@ export interface DashboardSession {
   totalEvents: number;
   totalTokens?: number;
   totalErrors: number;
+  totalCostUsd?: number | null;
   _count: { events: number };
 }
 
