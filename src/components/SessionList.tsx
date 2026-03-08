@@ -15,6 +15,45 @@ interface Session {
   _count: { events: number };
 }
 
+function ErrorRateBadge({ totalErrors, totalEvents }: { totalErrors: number; totalEvents: number }) {
+  if (totalErrors === 0) {
+    return (
+      <span className="text-emerald-400/40 text-[10px]">✓ clean</span>
+    );
+  }
+
+  const errorRate = totalEvents > 0 ? (totalErrors / totalEvents) * 100 : 100;
+  const fillPercent = Math.min(errorRate, 100);
+
+  let badgeClass: string;
+  let label: string;
+
+  if (errorRate >= 10) {
+    badgeClass =
+      "bg-red-500/20 text-red-300 border border-red-500/20 rounded-full px-2 py-0.5 text-[10px]";
+    label = `${errorRate.toFixed(0)}% err`;
+  } else if (errorRate >= 1) {
+    badgeClass =
+      "bg-orange-500/20 text-orange-300 border border-orange-500/20 rounded-full px-2 py-0.5 text-[10px]";
+    label = `${errorRate.toFixed(1)}% err`;
+  } else {
+    badgeClass = "text-red-400/50 text-[10px]";
+    label = `${totalErrors} err`;
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-0.5 mt-1">
+      <span className={badgeClass}>{label}</span>
+      <div className="w-full rounded-full h-1.5 bg-white/[0.04]" style={{ minWidth: "48px" }}>
+        <div
+          className="h-1.5 rounded-full bg-red-500/40"
+          style={{ width: `${fillPercent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function SessionList({ sessions }: { sessions: Session[] }) {
   return (
     <div className="rounded-xl border border-white/5 bg-white/2 p-4">
@@ -34,6 +73,7 @@ export function SessionList({ sessions }: { sessions: Session[] }) {
               key={s.id}
               href={`/sessions/${s.id}`}
               className="flex items-center justify-between p-3 rounded-lg bg-white/3 hover:bg-white/[0.07] active:bg-white/[0.06] transition-colors cursor-pointer"
+              style={{ minHeight: "44px" }}
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 min-w-0">
@@ -60,9 +100,10 @@ export function SessionList({ sessions }: { sessions: Session[] }) {
               <div className="text-right shrink-0 ml-3">
                 <div className="text-xs font-semibold text-white/50">{s._count.events}</div>
                 <div className="text-[10px] text-white/20">events</div>
-                {s.totalErrors > 0 && (
-                  <div className="text-[10px] text-red-400/60">{s.totalErrors} err</div>
-                )}
+                <ErrorRateBadge
+                  totalErrors={s.totalErrors}
+                  totalEvents={s.totalEvents > 0 ? s.totalEvents : s._count.events}
+                />
               </div>
             </Link>
           ))}
