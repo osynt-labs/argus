@@ -167,7 +167,7 @@ export default function OverviewPage() {
     : null;
 
   // System health
-  const isHealthy  = dbHealthy && connState === "open" && (parseFloat(errorRate ?? "0") < 10);
+  const isHealthy  = dbHealthy && connState === "connected" && (parseFloat(errorRate ?? "0") < 10);
   const isDegraded = !dbHealthy || parseFloat(errorRate ?? "0") >= 10;
   const statusLabel = !dbHealthy ? "DB Issues" : connState !== "open" ? "Disconnected" : isDegraded ? "Degraded" : "Operational";
   const statusColor = isDegraded ? "text-red-400 bg-red-500/10 border-red-500/25"
@@ -257,7 +257,7 @@ export default function OverviewPage() {
             <div className="shrink-0 px-4 py-2.5 border-b border-white/[0.04] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-white/50">Live Feed</span>
-                <span className={`w-1.5 h-1.5 rounded-full ${connState === "open" ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`} />
+                <span className={`w-1.5 h-1.5 rounded-full ${connState === "connected" ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`} />
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-white/20 tabular-nums">{events.length} events</span>
