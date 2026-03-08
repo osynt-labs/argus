@@ -4,6 +4,19 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 
+interface ToolAnalysisMeta {
+  category:    string;
+  subCategory: string;
+  icon:        string;
+  label:       string;
+  details:     Record<string, string>;
+  risk:        "low" | "medium" | "high" | "critical";
+  hasSecrets:  boolean;
+  secrets: Array<{
+    type: string; label: string; field: string; masked: string; severity: string;
+  }>;
+}
+
 interface EventMeta {
   cost_usd?:            number | null;
   cache_write_tokens?:  number | null;
@@ -12,8 +25,16 @@ interface EventMeta {
   runtime?:             string | null;
   model?:               string | null;
   label?:               string | null;
+  toolAnalysis?:        ToolAnalysisMeta | null;
   [key: string]: unknown;
 }
+
+const RISK_BADGE: Record<string, string> = {
+  low:      "",   // don't show for low — too noisy
+  medium:   "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
+  high:     "bg-orange-500/20 text-orange-300 border-orange-500/30",
+  critical: "bg-red-500/20   text-red-300    border-red-500/30",
+};
 
 interface Event {
   id:             string;
@@ -428,13 +449,67 @@ function EventDetail({ event }: { event: Event }) {
         </div>
       )}
 
+      {/* ── Tool Analysis (TOOL_CALL only) ── */}
+      {event.type === "TOOL_CALL" && meta?.toolAnalysis && (() => {
+        const a = meta.toolAnalysis as ToolAnalysisMeta;
+        return (
+          <div className="mb-2 p-2.5 bg-blue-500/5 border border-blue-500/10 rounded-md space-y-2">
+            {/* Header row */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-base">{a.icon}</span>
+              <span className="text-[11px] font-semibold text-blue-200/80">{a.label}</span>
+              <span className="text-[9px] font-mono text-white/25">{a.subCategory}</span>
+              {a.risk !== "low" && (
+                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${RISK_BADGE[a.risk] ?? ""}`}>
+                  {a.risk}
+                </span>
+              )}
+            </div>
+
+            {/* Details */}
+            {Object.keys(a.details ?? {}).length > 0 && (
+              <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[10px] font-mono">
+                {Object.entries(a.details).map(([k, v]) => (
+                  <span key={k} className="text-white/30">
+                    <span className="text-white/15">{k}: </span>{v}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Secrets */}
+            {a.secrets && a.secrets.length > 0 && (
+              <div className="mt-1 p-2 bg-red-600/10 border border-red-500/25 rounded space-y-1.5">
+                <div className="text-[9px] font-bold text-red-300/90 uppercase tracking-widest mb-1">
+                  ⚠️ Potential secrets detected
+                </div>
+                {a.secrets.map((s, i) => (
+                  <div key={i} className="flex items-center gap-2 text-[10px]">
+                    <span className={`px-1.5 py-0.5 rounded border text-[8px] font-bold uppercase ${
+                      s.severity === "critical" ? "bg-red-500/20 text-red-300 border-red-500/30" :
+                      s.severity === "high"     ? "bg-orange-500/20 text-orange-300 border-orange-500/30" :
+                                                  "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
+                    }`}>
+                      {s.severity}
+                    </span>
+                    <span className="text-white/60">{s.label}</span>
+                    <span className="font-mono text-white/30">{s.masked}</span>
+                    <span className="text-white/20">in {s.field}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       <JsonBlock data={event.input}  label="Input (params)"  />
       <JsonBlock data={event.output} label="Output (result)" />
 
       {/* Generic metadata for other types */}
       {meta && !isSpawn && !isLlm && !isMessageReceived && !isMessageSent && !isAgentStart && !isSubagentEnd && !isCronRun &&
-        Object.keys(meta).some(k => meta[k] != null) && (
-        <JsonBlock data={meta} label="Metadata" />
+        Object.keys(meta).filter(k => k !== "toolAnalysis").some(k => meta[k] != null) && (
+        <JsonBlock data={Object.fromEntries(Object.entries(meta).filter(([k]) => k !== "toolAnalysis"))} label="Metadata" />
       )}
 
       {event.error && (
@@ -585,21 +660,49 @@ export function LiveFeed({
                     : TYPE_BORDER[ev.type] ?? "border-l-transparent"
                 }`}
               >
-                {/* Icon */}
-                <span className="text-lg shrink-0 w-7 text-center mt-0.5">
-                  {TOOL_ICONS[ev.toolName ?? ""] ?? TYPE_ICONS[ev.type] ?? "📌"}
-                </span>
+                {/* Icon — use analysis icon for exec tool calls */}
+                {(() => {
+                  const analysis = (ev.metadata as EventMeta | null)?.toolAnalysis;
+                  const icon = (ev.type === "TOOL_CALL" && analysis?.icon)
+                    ? analysis.icon
+                    : (TOOL_ICONS[ev.toolName ?? ""] ?? TYPE_ICONS[ev.type] ?? "📌");
+                  return (
+                    <span className="text-lg shrink-0 w-7 text-center mt-0.5">{icon}</span>
+                  );
+                })()}
 
                 {/* Content */}
+                {(() => {
+                  const analysis = (ev.metadata as EventMeta | null)?.toolAnalysis;
+                  const riskBadge = analysis && RISK_BADGE[analysis.risk];
+                  const analysisLabel = ev.type === "TOOL_CALL" && analysis ? analysis.label : null;
+                  return (
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-semibold border ${badgeCls}`}>
                       {badgeLabel}
                     </span>
 
-                    {/* Tool name (skip for llm_call — badge says it all) */}
-                    {ev.toolName && !isLlm && (
+                    {/* Tool name — replaced by analysis label when available */}
+                    {ev.toolName && !isLlm && !analysisLabel && (
                       <span className="text-xs font-semibold text-white/80">{ev.toolName}</span>
+                    )}
+                    {analysisLabel && (
+                      <span className="text-xs font-semibold text-white/85 font-mono">{analysisLabel}</span>
+                    )}
+
+                    {/* Risk badge (only medium+) */}
+                    {riskBadge && (
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border ${riskBadge}`}>
+                        {analysis!.risk}
+                      </span>
+                    )}
+
+                    {/* Secrets warning */}
+                    {analysis?.hasSecrets && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-bold border bg-red-600/25 text-red-300 border-red-500/40 animate-pulse">
+                        🔑 SECRET
+                      </span>
                     )}
 
                     {/* For agent spawn: show label or task snippet */}
@@ -676,6 +779,8 @@ export function LiveFeed({
                     <span>{formatDistanceToNow(new Date(ev.timestamp), { addSuffix: true })}</span>
                   </div>
                 </div>
+                  );
+                })()}
               </div>
 
               {expandedId === ev.id && <EventDetail event={ev} />}

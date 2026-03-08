@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { EventType } from "@prisma/client";
+import { analyzeToolCall } from "./tool-analyzer";
 
 export interface IngestPayload {
   session_id: string;
@@ -85,12 +86,42 @@ export async function ingestEvent(payload: IngestPayload) {
     },
   });
 
+  // Enrich TOOL_CALL events with deep classification + secret detection
+  const eventType = mapEventType(payload.type);
+  let enrichedMetadata: Record<string, unknown> = (payload.metadata as Record<string, unknown>) ?? {};
+  if (eventType === EventType.TOOL_CALL) {
+    try {
+      const analysis = analyzeToolCall(payload.tool_name, payload.input);
+      enrichedMetadata = {
+        ...enrichedMetadata,
+        toolAnalysis: {
+          category:    analysis.category,
+          subCategory: analysis.subCategory,
+          icon:        analysis.icon,
+          label:       analysis.label,
+          details:     analysis.details,
+          risk:        analysis.risk,
+          secrets:     analysis.secrets.map((s) => ({
+            type:     s.type,
+            label:    s.label,
+            field:    s.field,
+            masked:   s.masked,
+            severity: s.severity,
+          })),
+          hasSecrets:  analysis.secrets.length > 0,
+        },
+      };
+    } catch {
+      // analysis is best-effort — never block ingestion
+    }
+  }
+
   // Create event
   const event = await prisma.event.create({
     data: {
       sessionId: payload.session_id,
       timestamp: ts,
-      type: mapEventType(payload.type),
+      type: eventType,
       toolName: payload.tool_name,
       subAgentId: payload.sub_agent_id,
       cronJobId: payload.cron_job_id,
@@ -104,7 +135,7 @@ export async function ingestEvent(payload: IngestPayload) {
       costUsd: payload.cost_usd,
       error: payload.error,
       status: payload.status ?? "ok",
-      metadata: payload.metadata as any,
+      metadata: enrichedMetadata as any,
     },
   });
 
