@@ -10,8 +10,9 @@ const NAV_ITEMS = [
   { href: "/", label: "Overview", icon: "grid", shortcut: "1" },
   { href: "/events", label: "Events", icon: "activity", shortcut: "2" },
   { href: "/sessions", label: "Sessions", icon: "layers", shortcut: "3" },
-  { href: "/tasks", label: "Tasks", icon: "target", shortcut: "4" },
-  { href: "/analytics", label: "Analytics", icon: "bar-chart", shortcut: "5" },
+  { href: "/runs", label: "Runs", icon: "play-circle", shortcut: "4" },
+  { href: "/tasks", label: "Tasks", icon: "target", shortcut: "5" },
+  { href: "/analytics", label: "Analytics", icon: "bar-chart", shortcut: "6" },
 ];
 
 function NavIcon({ name, className = "" }: { name: string; className?: string }) {
@@ -48,6 +49,12 @@ function NavIcon({ name, className = "" }: { name: string; className?: string })
         <circle cx="12" cy="12" r="10" />
         <circle cx="12" cy="12" r="6" />
         <circle cx="12" cy="12" r="2" />
+      </svg>
+    ),
+    "play-circle": (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <polygon points="10,8 16,12 10,16 10,8" fill="currentColor" stroke="none" opacity="0.7" />
       </svg>
     ),
   };
