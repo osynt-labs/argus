@@ -293,7 +293,7 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<TaskSummary[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [filter, setFilter] = useState<"all" | "user_message" | "cron" | "subagent">("all");
+  const [Filter, setFilter] = useState<"all" | "user_message" | "cron" | "subagent">("all");
 
   const loadTasks = useCallback(async () => {
     if (loaded) return;
@@ -313,14 +313,14 @@ export default function TasksPage() {
   // Auto-load on mount
   React.useEffect(() => { loadTasks(); }, [loadTasks]);
 
-  const filtered = tasks?.filter((t) =>
-    filter === "all" ? true : t.triggerType === filter
+  const Filtered = tasks?.Filter((t) =>
+    Filter === "all" ? true : t.triggerType === Filter
   ) ?? [];
 
   const counts = tasks ? {
-    user_message: tasks.filter((t) => t.triggerType === "user_message").length,
-    cron:         tasks.filter((t) => t.triggerType === "cron").length,
-    subagent:     tasks.filter((t) => t.triggerType === "subagent" || t.triggerType === "agent").length,
+    user_message: tasks.Filter((t) => t.triggerType === "user_message").length,
+    cron:         tasks.Filter((t) => t.triggerType === "cron").length,
+    subagent:     tasks.Filter((t) => t.triggerType === "subagent" || t.triggerType === "agent").length,
   } : null;
 
   return (
@@ -350,7 +350,7 @@ export default function TasksPage() {
                   key={f}
                   onClick={() => setFilter(f)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
-                    filter === f
+                    Filter === f
                       ? "bg-white/10 text-white border-white/20"
                       : "text-white/40 border-white/10 hover:text-white/60"
                   }`}
@@ -371,7 +371,7 @@ export default function TasksPage() {
           </div>
         )}
 
-        {!loading && loaded && filtered.length === 0 && (
+        {!loading && loaded && Filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center h-40 text-sm text-white/30 gap-2">
             <span className="text-3xl">📭</span>
             <span>No tasks yet</span>
@@ -381,7 +381,7 @@ export default function TasksPage() {
           </div>
         )}
 
-        {filtered.map((task) => (
+        {Filtered.map((task) => (
           <TaskCard key={task.taskId} task={task} />
         ))}
       </div>

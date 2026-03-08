@@ -36,25 +36,25 @@ function jobLabel(run: RunRow): string {
 
 const STATUS_CONFIG: Record<RunStatus, { label: string; dot: string; text: string; bg: string }> = {
   running: {
-    label: "פועל",
+    label: "Running",
     dot: "bg-yellow-400 animate-pulse",
     text: "text-yellow-300",
     bg: "bg-yellow-500/10 border-yellow-500/25",
   },
   done: {
-    label: "הסתיים",
+    label: "Done",
     dot: "bg-emerald-400",
     text: "text-emerald-300",
     bg: "bg-emerald-500/10 border-emerald-500/25",
   },
   error: {
-    label: "שגיאה",
+    label: "Error",
     dot: "bg-red-400",
     text: "text-red-300",
     bg: "bg-red-500/10 border-red-500/25",
   },
   stale: {
-    label: "תקוע?",
+    label: "Stale",
     dot: "bg-zinc-500",
     text: "text-zinc-400",
     bg: "bg-zinc-500/10 border-zinc-500/25",
@@ -209,7 +209,7 @@ export default function RunsPage() {
 
       // Detect new runs for flash animation
       const incomingIds = new Set(incoming.map((r) => r.id));
-      const added = new Set([...incomingIds].filter((id) => !prevIdsRef.current.has(id)));
+      const added = new Set([...incomingIds].Filter((id) => !prevIdsRef.current.has(id)));
       if (added.size > 0) {
         setNewIds(added);
         setTimeout(() => setNewIds(new Set()), 2000);
@@ -231,15 +231,15 @@ export default function RunsPage() {
   }, [fetchRuns]);
 
   // Filter
-  const filtered = runs.filter((r) => {
+  const Filtered = runs.Filter((r) => {
     if (triggerFilter !== "all" && r.triggerType !== triggerFilter) return false;
     if (statusFilter  !== "all" && r.status        !== statusFilter)  return false;
     return true;
   });
 
-  // Counts for filter tabs
-  const countByTrigger = (t: RunTrigger) => runs.filter((r) => r.triggerType === t).length;
-  const countByStatus  = (s: RunStatus)  => runs.filter((r) => r.status === s).length;
+  // Counts for Filter tabs
+  const countByTrigger = (t: RunTrigger) => runs.Filter((r) => r.triggerType === t).length;
+  const countByStatus  = (s: RunStatus)  => runs.Filter((r) => r.status === s).length;
   const runningCount = countByStatus("running");
 
   return (
@@ -253,25 +253,25 @@ export default function RunsPage() {
               {runningCount > 0 && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-yellow-500/15 text-yellow-300 border border-yellow-500/25">
                   <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
-                  {runningCount} פועלים
+                  {runningCount} running
                 </span>
               )}
             </h1>
             <p className="text-xs text-white/35 mt-0.5">
-              כל isolated run — cron jobs ו-sub-agents
+              All isolated runs — cron jobs & sub-agents
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             {lastRefresh && (
               <span className="text-[10px] text-white/20 font-mono hidden sm:block">
-                עודכן {format(lastRefresh, "HH:mm:ss")}
+                Updated {format(lastRefresh, "HH:mm:ss")}
               </span>
             )}
             <button
               onClick={fetchRuns}
               className="p-2 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.05] transition-colors"
-              title="רענן"
+              title="Refresh"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <polyline points="23,4 23,10 17,10" />
@@ -296,7 +296,7 @@ export default function RunsPage() {
                 }`}
               >
                 {t === "all"
-                  ? `הכל (${runs.length})`
+                  ? `All (${runs.length})`
                   : t === "cron"
                   ? `⏰ Cron (${countByTrigger("cron")})`
                   : `🤖 Sub-agent (${countByTrigger("subagent")})`}
@@ -317,14 +317,14 @@ export default function RunsPage() {
                 }`}
               >
                 {s === "all"
-                  ? "כל הסטטוסים"
+                  ? "All statuses"
                   : s === "running"
-                  ? `🟡 פועל (${countByStatus("running")})`
+                  ? `🟡 Running (${countByStatus("running")})`
                   : s === "done"
-                  ? `✅ הסתיים (${countByStatus("done")})`
+                  ? `✅ Done (${countByStatus("done")})`
                   : s === "error"
-                  ? `❌ שגיאה (${countByStatus("error")})`
-                  : `⚫ תקוע (${countByStatus("stale")})`}
+                  ? `❌ Error (${countByStatus("error")})`
+                  : `⚫ Stale (${countByStatus("stale")})`}
               </button>
             ))}
           </div>
@@ -335,23 +335,23 @@ export default function RunsPage() {
       <div className="flex-1 overflow-y-auto">
         {loading && (
           <div className="flex items-center justify-center h-40 text-sm text-white/30 animate-pulse">
-            טוען runs…
+            Loading runs…
           </div>
         )}
 
-        {!loading && filtered.length === 0 && (
+        {!loading && Filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center h-40 gap-2 text-white/25">
             <span className="text-3xl">📭</span>
-            <span className="text-sm">אין runs עדיין</span>
+            <span className="text-sm">No runs yet</span>
             <span className="text-[11px] text-white/15">
-              Runs יופיעו לאחר ריצת cron job או sub-agent
+              Runs appear after a cron job or sub-agent executes
             </span>
           </div>
         )}
 
         {/* Grouped by date */}
-        {!loading && filtered.length > 0 && (
-          <GroupedRuns runs={filtered} newIds={newIds} />
+        {!loading && Filtered.length > 0 && (
+          <GroupedRuns runs={Filtered} newIds={newIds} />
         )}
       </div>
     </div>
@@ -373,9 +373,9 @@ function GroupedRuns({ runs, newIds }: { runs: RunRow[]; newIds: Set<string> }) 
     const ds = d.toDateString();
     const label =
       ds === today
-        ? "היום"
+        ? "Today"
         : ds === yesterday
-        ? "אתמול"
+        ? "Yesterday"
         : format(d, "dd.MM.yyyy");
 
     if (!seen.has(label)) {

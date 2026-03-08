@@ -48,38 +48,38 @@ export async function GET(req: NextRequest) {
        -- trigger type: prefer CRON_RUN, else check AGENT_START
        CASE
          WHEN EXISTS (
-           SELECT 1 FROM "Event" e WHERE e."sessionId" = s.id AND e.type = 'CRON_RUN'
+           SELECT 1 FROM "events" e WHERE e."sessionId" = s.id AND e.type = 'CRON_RUN'
          ) THEN 'cron'
          WHEN s.key LIKE '%:cron:%' OR s.key LIKE 'cron:%' THEN 'cron'
          ELSE 'subagent'
        END                                                  AS "triggerType",
        -- job name from cron_run metadata or session key
        (SELECT e.metadata->>'trigger_preview'
-          FROM "Event" e
+          FROM "events" e
          WHERE e."sessionId" = s.id AND e.type = 'CRON_RUN'
          LIMIT 1)                                           AS "jobName",
        -- session_end timestamp if exists
        (SELECT e.timestamp
-          FROM "Event" e
+          FROM "events" e
          WHERE e."sessionId" = s.id AND e.type = 'SESSION_END'
          LIMIT 1)                                           AS "endedAt",
        -- has error events?
        EXISTS (
-         SELECT 1 FROM "Event" e
+         SELECT 1 FROM "events" e
           WHERE e."sessionId" = s.id AND e.status = 'error'
        )                                                    AS "hasError",
        -- parent session (who spawned this via AGENT_SPAWN)
        (SELECT e."sessionId"
-          FROM "Event" e
+          FROM "events" e
          WHERE e.type = 'AGENT_SPAWN' AND e."subAgentId" = s.key
          LIMIT 1)                                           AS "parentSessionId"
-     FROM "Session" s
+     FROM "sessions" s
     WHERE (
       -- Has a CRON_RUN event
-      EXISTS (SELECT 1 FROM "Event" e WHERE e."sessionId" = s.id AND e.type = 'CRON_RUN')
+      EXISTS (SELECT 1 FROM "events" e WHERE e."sessionId" = s.id AND e.type = 'CRON_RUN')
       OR
       -- Is a known child session (subagent)
-      EXISTS (SELECT 1 FROM "Event" e WHERE e.type = 'AGENT_SPAWN' AND e."subAgentId" = s.key)
+      EXISTS (SELECT 1 FROM "events" e WHERE e.type = 'AGENT_SPAWN' AND e."subAgentId" = s.key)
       OR
       -- Session key looks like a cron/isolated session
       s.key LIKE '%:cron:%'

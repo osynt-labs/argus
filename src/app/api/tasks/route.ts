@@ -43,16 +43,16 @@ export async function GET(req: NextRequest) {
        COUNT(*) FILTER (WHERE "status" = 'error')::bigint      AS "errors",
        COUNT(*) FILTER (WHERE "type" = 'AGENT_SPAWN')::bigint  AS "subAgents",
        (SELECT e2."metadata"->>'trigger_type'
-          FROM "Event" e2
+          FROM "events" e2
          WHERE e2."taskId" = e."taskId"
            AND e2."metadata"->>'trigger_type' IS NOT NULL
          LIMIT 1)                                               AS "triggerType",
        (SELECT e2."metadata"->>'trigger_preview'
-          FROM "Event" e2
+          FROM "events" e2
          WHERE e2."taskId" = e."taskId"
            AND e2."metadata"->>'trigger_preview' IS NOT NULL
          LIMIT 1)                                               AS "triggerPreview"
-     FROM "Event" e
+     FROM "events" e
     WHERE "taskId" IS NOT NULL
       ${sessionId ? `AND "sessionId" = '${sessionId}'` : ""}
     GROUP BY "taskId", "sessionId"
