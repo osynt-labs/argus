@@ -209,7 +209,7 @@ export default function RunsPage() {
 
       // Detect new runs for flash animation
       const incomingIds = new Set(incoming.map((r) => r.id));
-      const added = new Set([...incomingIds].Filter((id) => !prevIdsRef.current.has(id)));
+      const added = new Set([...incomingIds].filter((id) => !prevIdsRef.current.has(id)));
       if (added.size > 0) {
         setNewIds(added);
         setTimeout(() => setNewIds(new Set()), 2000);
