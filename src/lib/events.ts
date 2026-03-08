@@ -13,6 +13,7 @@ export interface IngestPayload {
   tool_name?: string;
   sub_agent_id?: string;
   cron_job_id?: string;
+  task_id?: string;
   input?: unknown;
   output?: unknown;
   duration_ms?: number;
@@ -125,6 +126,7 @@ export async function ingestEvent(payload: IngestPayload) {
       toolName: payload.tool_name,
       subAgentId: payload.sub_agent_id,
       cronJobId: payload.cron_job_id,
+      ...(payload.task_id ? { taskId: payload.task_id } : {}),
       input: payload.input as any,
       output: payload.output as any,
       durationMs: payload.duration_ms,

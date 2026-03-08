@@ -18,9 +18,11 @@ model Session {
   totalTokens Int      @default(0)
   totalErrors  Int      @default(0)
   totalCostUsd Float    @default(0)
+  rootTaskId  String?
   metadata    Json?
   events      Event[]
 
+  @@index([rootTaskId])
   @@map("sessions")
 }
 
@@ -33,6 +35,7 @@ model Event {
   toolName     String?
   subAgentId   String?
   cronJobId    String?
+  taskId       String?
   input        Json?
   output       Json?
   durationMs   Int?
@@ -50,6 +53,7 @@ model Event {
   @@index([timestamp])
   @@index([type])
   @@index([toolName])
+  @@index([taskId])
   @@map("events")
 }
 
