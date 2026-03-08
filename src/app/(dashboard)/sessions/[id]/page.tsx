@@ -567,12 +567,13 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  // Chronological events (initial load + paginated older events combined)
+  // Newest-first events (initial load + paginated older events combined)
   const timelineEvents = useMemo(() => {
     if (!session?.events) return [];
     const combined = [...session.events, ...additionalEvents];
+    // newest first — most recent event at the top
     return combined.sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
   }, [session, additionalEvents]);
 
@@ -582,11 +583,13 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
   );
 
   // Group events into turns by MESSAGE_RECEIVED boundaries
+  // Build on chronological order, then reverse so newest turn is first
   const turns = useMemo((): Turn[] => {
     const result: Turn[] = [];
     let current: Turn | null = null;
 
-    for (const event of timelineEvents) {
+    // timelineEvents is newest-first; reverse for grouping logic
+    for (const event of [...timelineEvents].reverse()) {
       if (event.type === "MESSAGE_RECEIVED") {
         current = {
           id: event.id,
@@ -618,7 +621,8 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
       }
     }
 
-    return result;
+    // Reverse so newest turn appears first
+    return result.reverse();
   }, [timelineEvents]);
 
   // Auto-switch to timeline when there are no turns but there are events
