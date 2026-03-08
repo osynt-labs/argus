@@ -39,6 +39,8 @@ function mapEventType(type: string): EventType {
     session_start: EventType.SESSION_START,
     session_end: EventType.SESSION_END,
     model_switch: EventType.MODEL_SWITCH,
+    subagent_spawning: EventType.SUBAGENT_SPAWNING,
+    subagent_ended: EventType.SUBAGENT_ENDED,
   };
   return map[type.toLowerCase()] ?? EventType.TOOL_CALL;
 }
