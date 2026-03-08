@@ -194,7 +194,7 @@ function TaskCard({ task }: { task: TaskSummary }) {
       {/* Header */}
       <button
         onClick={toggle}
-        className="w-full flex items-start gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-right"
+        className="w-full flex items-start gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left"
       >
         {/* Expand arrow */}
         <svg
@@ -210,7 +210,7 @@ function TaskCard({ task }: { task: TaskSummary }) {
         </span>
 
         {/* Main info */}
-        <div className="flex-1 min-w-0 text-right">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap justify-end mb-1">
             <span className="text-[10px] text-white/30 uppercase tracking-wide font-medium">
               {trigType.replace(/_/g, " ")}
@@ -224,7 +224,7 @@ function TaskCard({ task }: { task: TaskSummary }) {
 
           {/* Preview */}
           {task.triggerPreview && (
-            <div className="text-xs text-white/60 truncate mb-2 text-right">
+            <div className="text-xs text-white/60 truncate mb-2">
               {task.triggerPreview}
             </div>
           )}
@@ -240,7 +240,7 @@ function TaskCard({ task }: { task: TaskSummary }) {
         </div>
 
         {/* Time */}
-        <div className="shrink-0 text-right text-[10px] text-white/25 font-mono">
+        <div className="shrink-0 text-[10px] text-white/25 font-mono">
           <div>{format(new Date(task.startedAt), "HH:mm:ss")}</div>
           <div className="text-white/15 mt-0.5">
             {formatDistanceToNow(new Date(task.startedAt), { addSuffix: true })}
