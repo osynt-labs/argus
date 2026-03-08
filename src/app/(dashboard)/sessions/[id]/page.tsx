@@ -529,26 +529,58 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("turns");
 
+  // Pagination state
+  const [eventCount, setEventCount] = useState<number>(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [additionalEvents, setAdditionalEvents] = useState<SessionEvent[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   useEffect(() => {
     setLoading(true);
     setError(null);
+    setAdditionalEvents([]);
     fetch(`/api/sessions/${id}`)
       .then((r) => {
         if (!r.ok) throw new Error(r.status === 404 ? "Session not found" : "Failed to load");
         return r.json();
       })
-      .then((data) => { setSession(data.session); setSummary(data.summary); })
+      .then((data) => {
+        setSession(data.session);
+        setSummary(data.summary);
+        setEventCount(data.eventCount ?? 0);
+        setHasMore(data.hasMore ?? false);
+        setNextCursor(data.nextCursor ?? null);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Chronological events
+  const loadMoreEvents = async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const r = await fetch(`/api/sessions/${id}?cursor=${encodeURIComponent(nextCursor)}`);
+      if (!r.ok) throw new Error("Failed to load more events");
+      const data = await r.json();
+      setAdditionalEvents((prev) => [...prev, ...(data.events as SessionEvent[])]);
+      setHasMore(data.hasMore ?? false);
+      setNextCursor(data.nextCursor ?? null);
+    } catch (err) {
+      console.error("[loadMoreEvents]", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Chronological events (initial load + paginated older events combined)
   const timelineEvents = useMemo(() => {
     if (!session?.events) return [];
-    return [...session.events].sort(
+    const combined = [...session.events, ...additionalEvents];
+    return combined.sort(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
-  }, [session]);
+  }, [session, additionalEvents]);
 
   const maxDuration = useMemo(
     () => Math.max(...timelineEvents.map((e) => e.durationMs ?? 0), 1),
@@ -842,6 +874,33 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
                     />
                   ))}
                 </div>
+              </div>
+            )}
+            {/* Load older events button (timeline view) */}
+            {hasMore && (
+              <div className="pt-4 pb-4 flex justify-center">
+                <button
+                  onClick={loadMoreEvents}
+                  disabled={loadingMore}
+                  className="flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-xl bg-white/[0.05] border border-white/[0.09] text-sm text-white/50 hover:text-white/80 hover:bg-white/[0.08] hover:border-white/[0.14] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingMore ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/15 border-t-white/50 rounded-full animate-spin" />
+                      <span>Loading…</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="17,1 21,5 17,9" />
+                        <path d="M3,11V9a4,4,0,0,1,4-4h14" />
+                        <polyline points="7,23 3,19 7,15" />
+                        <path d="M21,13v2a4,4,0,0,1-4,4H3" />
+                      </svg>
+                      <span>Load older events</span>
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </div>
