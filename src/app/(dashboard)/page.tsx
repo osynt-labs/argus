@@ -53,6 +53,7 @@ export default function OverviewPage() {
                   last1h: stats.last1h,
                   errorsLast24h: stats.errorsLast24h,
                   costUsd24h: stats.costUsd24h,
+                  estimatedCostUsd: stats.estimatedCostUsd,
                   tokenStats: stats.tokenStats,
                 }}
               />
@@ -121,6 +122,7 @@ export default function OverviewPage() {
                     last1h: stats.last1h,
                     errorsLast24h: stats.errorsLast24h,
                     costUsd24h: stats.costUsd24h,
+                    estimatedCostUsd: stats.estimatedCostUsd,
                     tokenStats: stats.tokenStats,
                   }}
                 />

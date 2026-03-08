@@ -38,6 +38,15 @@ export async function GET() {
         }),
       ]);
 
+    // Estimate cost from token counts when costUsd is not recorded in DB
+    const INPUT_RATE = 3.0;   // $3/M input tokens (Claude Sonnet 4.x)
+    const OUTPUT_RATE = 15.0; // $15/M output tokens
+    const CACHE_RATE = 0.30;  // $0.30/M cache read tokens
+    const est =
+      (tokenStats._sum.inputTokens ?? 0) * INPUT_RATE / 1_000_000 +
+      (tokenStats._sum.outputTokens ?? 0) * OUTPUT_RATE / 1_000_000 +
+      (tokenStats._sum.cacheTokens ?? 0) * CACHE_RATE / 1_000_000;
+
     return NextResponse.json({
       total,
       last24h,
@@ -47,6 +56,7 @@ export async function GET() {
       errorsLast24h,
       tokenStats,
       costUsd24h: costResult._sum.costUsd ?? 0,
+      estimatedCostUsd: costResult._sum.costUsd ?? (est > 0 ? est : null),
     });
   } catch (err) {
     console.error("[api/stats] DB query failed:", err);

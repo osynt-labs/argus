@@ -33,6 +33,7 @@ export interface DashboardStats {
   byType?: { type: string; _count: number }[];
   errorsLast24h: number;
   costUsd24h?: number | null;
+  estimatedCostUsd?: number | null;
   tokenStats: {
     _sum: { inputTokens?: number | null; outputTokens?: number | null; cacheTokens?: number | null };
     _avg: { durationMs?: number | null };
@@ -164,6 +165,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               byType: data.byType,
               errorsLast24h: data.errorsLast24h,
               costUsd24h: data.costUsd24h ?? null,
+              estimatedCostUsd: data.estimatedCostUsd ?? null,
               tokenStats: data.tokenStats,
             });
           } else {

@@ -6,6 +6,7 @@ interface Stats {
   last1h: number;
   errorsLast24h: number;
   costUsd24h?: number | null;
+  estimatedCostUsd?: number | null;
   tokenStats: {
     _sum: { inputTokens?: number | null; outputTokens?: number | null; cacheTokens?: number | null };
     _avg: { durationMs?: number | null };
@@ -78,7 +79,10 @@ export function StatsCards({ stats }: { stats: Stats }) {
     ? ((stats.errorsLast24h / stats.last24h) * 100).toFixed(1)
     : "0";
   const eventsPerHour = Math.round(stats.last24h / 24);
-  const cost = stats.costUsd24h ?? null;
+  // Use real costUsd if available and non-zero, otherwise fall back to estimated
+  const realCost = stats.costUsd24h != null && stats.costUsd24h > 0 ? stats.costUsd24h : null;
+  const cost = realCost ?? stats.estimatedCostUsd ?? null;
+  const isEstimated = realCost == null && cost != null;
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
@@ -121,9 +125,9 @@ export function StatsCards({ stats }: { stats: Stats }) {
       />
       <StatCard
         icon="💰"
-        label="Cost 24h"
+        label={isEstimated ? "Est. Cost 24h" : "Cost 24h"}
         value={cost != null ? formatCost(cost) : "—"}
-        sub="LLM spend"
+        sub={isEstimated ? "~estimated from tokens" : "LLM spend"}
         color="emerald"
       />
     </div>
