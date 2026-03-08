@@ -19,8 +19,10 @@ interface TimelineBucket {
   cost?: number;
 }
 
+type ToolBreakdown = { toolName: string; count: number; errors: number; avgDurationMs: number; totalCostUsd: number };
+
 interface AnalyticsData {
-  toolBreakdown: { toolName: string; count: number; errors?: number; avgDurationMs?: number }[];
+  toolBreakdown: ToolBreakdown[];
   modelBreakdown: { model: string; _count?: number; count?: number; tokens?: number; inputTokens?: number; outputTokens?: number; cacheTokens?: number }[];
   eventTypeBreakdown: { type: string; _count?: number; count?: number }[];
   errorRate: { total: number; errors: number; rate: number };
@@ -181,8 +183,8 @@ export default function AnalyticsPage() {
   const eventTypes = analytics?.eventTypeBreakdown ??
     (stats?.byType?.map((t: any) => ({ type: t.type, _count: t._count })) ?? []);
 
-  const toolBreakdown = analytics?.toolBreakdown ??
-    (stats?.byTool?.map((t: any) => ({ toolName: t.toolName ?? "unknown", count: t._count ?? 0, errors: 0 })) ?? []);
+  const toolBreakdown: ToolBreakdown[] = analytics?.toolBreakdown ??
+    (stats?.byTool?.map((t: any) => ({ toolName: t.toolName ?? "unknown", count: t._count ?? 0, errors: 0, avgDurationMs: 0, totalCostUsd: 0 })) ?? []);
 
   const toolData = toolBreakdown.map((t) => ({
     name: t.toolName ?? "unknown",
@@ -190,6 +192,7 @@ export default function AnalyticsPage() {
     errors: t.errors ?? 0,
     total: t.count ?? 0,
     errorRate: t.count ? (((t.errors ?? 0) / t.count) * 100).toFixed(1) : "0.0",
+    totalCostUsd: t.totalCostUsd ?? 0,
   }));
 
   const topErrorRateTools = [...toolData]
@@ -475,6 +478,52 @@ export default function AnalyticsPage() {
                         <span className="text-[10px] text-white/30">Errors</span>
                       </div>
                     </div>
+                    {/* Tool cost table */}
+                    {toolData.some((t) => t.totalCostUsd > 0) && (
+                      <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                        <p className="text-[10px] text-white/30 mb-2 font-medium uppercase tracking-wider">Cost per Tool</p>
+                        {/* Mobile: badges */}
+                        <div className="sm:hidden flex flex-wrap gap-2">
+                          {toolData
+                            .filter((t) => t.totalCostUsd > 0)
+                            .sort((a, b) => b.totalCostUsd - a.totalCostUsd)
+                            .map((t) => (
+                              <div
+                                key={t.name}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 min-h-[32px]"
+                              >
+                                <span className="text-xs text-white/50 truncate max-w-[100px]">{t.name}</span>
+                                <span className="text-xs font-semibold text-amber-400">${t.totalCostUsd.toFixed(4)}</span>
+                              </div>
+                            ))}
+                        </div>
+                        {/* Desktop: table */}
+                        <div className="hidden sm:block overflow-hidden rounded-lg border border-white/[0.06]">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b border-white/[0.06] bg-white/[0.02]">
+                                <th className="text-left px-3 py-2 text-white/30 font-medium">Tool</th>
+                                <th className="text-right px-3 py-2 text-white/30 font-medium">Calls</th>
+                                <th className="text-right px-3 py-2 text-amber-400/60 font-medium">Cost (USD)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {toolData
+                                .filter((t) => t.totalCostUsd > 0)
+                                .sort((a, b) => b.totalCostUsd - a.totalCostUsd)
+                                .map((t) => (
+                                  <tr key={t.name} className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors">
+                                    <td className="px-3 py-2 text-white/60 font-medium truncate max-w-[160px]">{t.name}</td>
+                                    <td className="px-3 py-2 text-right text-white/30 tabular-nums">{t.total.toLocaleString()}</td>
+                                    <td className="px-3 py-2 text-right font-semibold text-amber-400 tabular-nums">${t.totalCostUsd.toFixed(4)}</td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Top error rate tools */}
                     {topErrorRateTools.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-white/[0.06]">

@@ -21,6 +21,7 @@ export async function GET() {
         where: { ...where, toolName: { not: null } },
         _count: true,
         _avg: { durationMs: true },
+        _sum: { costUsd: true },
         orderBy: { _count: { toolName: "desc" } },
         take: 20,
       }),
@@ -61,6 +62,7 @@ export async function GET() {
       count: g._count,
       errors: toolErrorCounts.get(g.toolName!) ?? 0,
       avgDurationMs: Math.round(g._avg.durationMs ?? 0),
+      totalCostUsd: g._sum.costUsd ?? 0,
     }));
 
     const modelBreakdown = modelGroups.map((g) => ({
