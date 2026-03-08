@@ -170,13 +170,7 @@ function TurnCard({ turn, turnIndex, maxDuration }: { turn: Turn; turnIndex: num
   const [expanded, setExpanded] = useState(false);
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
 
-  const userMsg = getMessagePreview(turn.receivedEvent!) ?? turn.receivedEvent?.metadata
-    ? (() => {
-        const meta = turn.receivedEvent?.metadata as Record<string, unknown> | null;
-        const p = meta?.content_preview ?? meta?.prompt_preview;
-        return typeof p === "string" ? p : null;
-      })()
-    : null;
+  const userMsg = turn.receivedEvent ? getMessagePreview(turn.receivedEvent) : null;
 
   const responseMsg = turn.sentEvent ? getMessagePreview(turn.sentEvent) : null;
   const hasErrors = turn.errorCount > 0;
