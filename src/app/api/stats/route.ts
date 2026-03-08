@@ -55,7 +55,7 @@ export async function GET() {
       byType,
       errorsLast24h,
       tokenStats,
-      costUsd24h: costResult._sum.costUsd ?? 0,
+      costUsd24h: costResult._sum.costUsd ?? (est > 0 ? est : 0),
       estimatedCostUsd: costResult._sum.costUsd ?? (est > 0 ? est : null),
     });
   } catch (err) {

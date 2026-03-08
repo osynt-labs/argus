@@ -118,8 +118,9 @@ export default function AnalyticsPage() {
 
   const fetchData = (currentRange: "24" | "72" | "168") => {
     setLoading(true);
+    const bucketSize = currentRange === "168" ? "day" : "hour";
     Promise.all([
-      fetch(`/api/analytics/timeline?hours=${currentRange}&bucket=hour`).then((r) => r.json()),
+      fetch(`/api/analytics/timeline?hours=${currentRange}&bucket=${bucketSize}`).then((r) => r.json()),
       fetch("/api/analytics").then((r) => r.json()),
     ])
       .then(([timelineData, analyticsData]) => {
@@ -153,7 +154,7 @@ export default function AnalyticsPage() {
 
   const timelineFormatted = timeline.map((b) => ({
     ...b,
-    label: format(new Date(b.time), timeRange === "168" ? "EEE HH:mm" : "HH:mm"),
+    label: format(new Date(b.time), timeRange === "168" ? "EEE" : "HH:mm"),
   }));
 
   const handleTimelineBucketClick = useCallback((data: any) => {

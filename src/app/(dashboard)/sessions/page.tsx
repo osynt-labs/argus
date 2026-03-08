@@ -254,7 +254,7 @@ export default function SessionsPage() {
             ))}
 
             {/* Load more */}
-            {hasMore && sorted.length >= 20 && (
+            {hasMore && sorted.length >= 10 && (
               <div className="flex justify-center pt-4 pb-2">
                 <button
                   onClick={loadMore}
