@@ -582,20 +582,28 @@ export function LiveFeed({
   externalEvents?: Event[];
   onConnectionChange?: (connected: boolean) => void;
 }) {
-  const [ownEvents,    setOwnEvents]    = useState<Event[]>(initialEvents);
-  const [connected,    setConnected]    = useState(false);
-  const [filter,       setFilter]       = useState<string>("all");
-  const [newCount,     setNewCount]     = useState(0);
-  const [expandedId,   setExpandedId]   = useState<string | null>(null);
-  const [atTop,        setAtTop]        = useState(true);
-  const [pendingCount, setPendingCount] = useState(0);
+  const [ownEvents,       setOwnEvents]       = useState<Event[]>(initialEvents);
+  const [connected,       setConnected]       = useState(false);
+  const [filter,          setFilter]          = useState<string>("all");
+  const [newCount,        setNewCount]        = useState(0);
+  const [expandedId,      setExpandedId]      = useState<string | null>(null);
+  const [atTop,           setAtTop]           = useState(true);
+  const [pendingCount,    setPendingCount]    = useState(0);
+  const [isPaused,        setIsPaused]        = useState(false);
+  const [isPinnedPaused,  setIsPinnedPaused]  = useState(false);
+  const [displayedEvents, setDisplayedEvents] = useState<Event[]>(initialEvents);
+  const [bufferedCount,   setBufferedCount]   = useState(0);
   const topRef               = useRef<HTMLDivElement>(null);
   const atTopRef             = useRef(true);
   const prevFilteredLenRef   = useRef(0);
   const justChangedFilterRef = useRef(false);
+  const prevEventsLenRef     = useRef(initialEvents.length);
 
   // Use external events if provided (from dashboard layout context), otherwise manage own SSE
   const events = externalEvents ?? ownEvents;
+
+  // Derived: effective pause = hover-pause OR pinned-pause
+  const effectivePaused = isPaused || isPinnedPaused;
 
   const setConn = useCallback((v: boolean) => {
     setConnected(v);
@@ -633,15 +641,39 @@ export function LiveFeed({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
-  const filtered = filter === "all"      ? events
-    : filter === "errors"    ? events.filter(e => e.status === "error" || !!e.error)
-    : filter === "tools"     ? events.filter(e => e.type === "TOOL_CALL" && e.toolName !== "llm_call")
-    : filter === "agents"    ? events.filter(e => ["AGENT_SPAWN","AGENT_START","AGENT_END","SUBAGENT_SPAWNING","SUBAGENT_ENDED"].includes(e.type))
-    : filter === "llm"       ? events.filter(e => e.toolName === "llm_call")
-    : filter === "messages"  ? events.filter(e => ["MESSAGE_RECEIVED","MESSAGE_SENT","MESSAGE_SEND"].includes(e.type))
-    : filter === "crons"     ? events.filter(e => e.type === "CRON_RUN")
-    : filter === "sessions"  ? events.filter(e => ["SESSION_START","SESSION_END"].includes(e.type))
-    : events;
+  // Sync displayed events with live events when not paused; count buffered when paused
+  useEffect(() => {
+    if (!effectivePaused) {
+      setDisplayedEvents(events);
+      setBufferedCount(0);
+      prevEventsLenRef.current = events.length;
+    } else {
+      const added = events.length - prevEventsLenRef.current;
+      if (added > 0) {
+        setBufferedCount((c) => c + added);
+        prevEventsLenRef.current = events.length;
+      }
+    }
+  }, [events, effectivePaused]);
+
+  // Auto-scroll to top on new events — only when not paused and user is already at top
+  useEffect(() => {
+    if (effectivePaused) return;
+    if (atTopRef.current) {
+      topRef.current?.scrollTo({ top: 0 });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events.length]);
+
+  const filtered = filter === "all"      ? displayedEvents
+    : filter === "errors"    ? displayedEvents.filter(e => e.status === "error" || !!e.error)
+    : filter === "tools"     ? displayedEvents.filter(e => e.type === "TOOL_CALL" && e.toolName !== "llm_call")
+    : filter === "agents"    ? displayedEvents.filter(e => ["AGENT_SPAWN","AGENT_START","AGENT_END","SUBAGENT_SPAWNING","SUBAGENT_ENDED"].includes(e.type))
+    : filter === "llm"       ? displayedEvents.filter(e => e.toolName === "llm_call")
+    : filter === "messages"  ? displayedEvents.filter(e => ["MESSAGE_RECEIVED","MESSAGE_SENT","MESSAGE_SEND"].includes(e.type))
+    : filter === "crons"     ? displayedEvents.filter(e => e.type === "CRON_RUN")
+    : filter === "sessions"  ? displayedEvents.filter(e => ["SESSION_START","SESSION_END"].includes(e.type))
+    : displayedEvents;
 
   const filters = [
     { id: "all",      label: "All" },
@@ -676,11 +708,41 @@ export function LiveFeed({
             )}
           </button>
         ))}
-        <div className="ml-auto shrink-0 text-[10px] text-white/20 hidden sm:block">{events.length} events</div>
+        <div className="ml-auto shrink-0 flex items-center gap-2">
+          <span className="text-[10px] text-white/20 hidden sm:block">{displayedEvents.length} events</span>
+          {/* Pause / Resume toggle button — always visible, 44px touch target */}
+          <button
+            onClick={() => setIsPinnedPaused((p) => !p)}
+            aria-label={isPinnedPaused ? "Resume live feed" : "Pause live feed"}
+            title={isPinnedPaused ? "Resume" : "Pause"}
+            className={`flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-[32px] sm:min-h-[32px] rounded-lg text-sm transition-colors ${
+              isPinnedPaused
+                ? "bg-white/10 text-white"
+                : "text-white/30 hover:text-white/60 active:text-white/60"
+            }`}
+          >
+            {isPinnedPaused ? "▶" : "⏸"}
+          </button>
+        </div>
       </div>
 
       {/* Events */}
-      <div ref={topRef} className="flex-1 overflow-y-auto">
+      <div
+        ref={topRef}
+        className="flex-1 overflow-y-auto relative"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onScroll={handleScroll}
+      >
+        {/* Paused badge — top-right corner, sticky */}
+        {effectivePaused && (
+          <div className="sticky top-2 z-10 flex justify-end px-2 pointer-events-none">
+            <span className="text-[10px] text-white/40 bg-white/[0.04] rounded-full px-2 py-0.5">
+              ⏸ Paused{bufferedCount > 0 ? ` · +${bufferedCount} new` : ""}
+            </span>
+          </div>
+        )}
+
         {filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center h-40 gap-2">
             <span className="text-3xl opacity-20">👁</span>
