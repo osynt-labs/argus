@@ -76,7 +76,7 @@ export default function OverviewPage() {
                 <ToolChart
                   data={stats.byTool.map((d) => ({
                     toolName: d.toolName,
-                    _count: d._count.toolName,
+                    _count: typeof (d._count as any) === 'object' ? (d._count as any).toolName ?? 0 : (d._count as any) ?? 0,
                   }))}
                 />
                 <SessionList sessions={sessions} />
@@ -130,7 +130,7 @@ export default function OverviewPage() {
                   <ToolChart
                     data={stats.byTool.map((d) => ({
                       toolName: d.toolName,
-                      _count: d._count.toolName,
+                      _count: typeof (d._count as any) === 'object' ? (d._count as any).toolName ?? 0 : (d._count as any) ?? 0,
                     }))}
                   />
                   <SessionList sessions={sessions} />

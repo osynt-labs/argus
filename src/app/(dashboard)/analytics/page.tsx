@@ -186,6 +186,23 @@ export default function AnalyticsPage() {
     .sort((a, b) => parseFloat(b.errorRate) - parseFloat(a.errorRate))
     .slice(0, 3);
 
+  const eventTypeData = (() => {
+    const mapped = eventTypes
+      .map((t: any) => ({
+        name: TYPE_LABELS[t.type] ?? t.type,
+        value: (t._count ?? t.count ?? 0) as number,
+        type: t.type as string,
+      }))
+      .filter((t) => t.value > 0)
+      .sort((a, b) => b.value - a.value);
+    if (mapped.length <= 8) return mapped;
+    const top = mapped.slice(0, 8);
+    const otherValue = mapped.slice(8).reduce((sum, t) => sum + t.value, 0);
+    if (otherValue > 0) top.push({ name: "Other", value: otherValue, type: "OTHER" });
+    return top;
+  })();
+  const eventTypeTotal = eventTypeData.reduce((sum, t) => sum + t.value, 0);
+
   return (
     <div className="flex flex-col h-full">
       {/* Page header */}
@@ -472,51 +489,101 @@ export default function AnalyticsPage() {
                 )}
               </div>
 
-              {/* Event type distribution - responsive layout */}
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                <h3 className="text-sm font-semibold text-white/50 mb-4">
-                  Event Type Distribution
-                </h3>
-                {isMounted && eventTypes.length > 0 ? (
-                  <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="w-[160px] h-[160px] sm:w-[180px] sm:h-[180px] shrink-0">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={eventTypes.map((t: any) => ({
-                              name: TYPE_LABELS[t.type] ?? t.type,
-                              value: t._count ?? t.count ?? 0,
-                            }))}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={35}
-                            outerRadius={65}
-                            paddingAngle={2}
-                            dataKey="value"
-                          >
-                            {eventTypes.map((_: any, i: number) => (
-                              <Cell key={i} fill={COLORS[i % COLORS.length]} fillOpacity={0.8} />
-                            ))}
-                          </Pie>
-                          <Tooltip content={<CustomTooltip />} />
-                        </PieChart>
-                      </ResponsiveContainer>
+              {/* Event Type Distribution */}
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5">
+                <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-4">Event Type Distribution</h3>
+                {isMounted && eventTypeData.length > 0 ? (
+                  <>
+                    {/* Mobile: horizontal bar chart (easier to read on small screens) */}
+                    <div className="sm:hidden space-y-3">
+                      {eventTypeData.map((t, i) => {
+                        const pct = eventTypeTotal > 0 ? (t.value / eventTypeTotal) * 100 : 0;
+                        return (
+                          <div key={t.type} className="space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span
+                                  className="w-2.5 h-2.5 rounded-sm shrink-0"
+                                  style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                                />
+                                <span className="text-sm text-white/50 truncate">{t.name}</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-sm font-mono text-white/30">{t.value.toLocaleString()}</span>
+                                <span className="text-xs text-white/20 w-10 text-right">{pct.toFixed(1)}%</span>
+                              </div>
+                            </div>
+                            <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length], opacity: 0.8 }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="flex-1 space-y-2 sm:space-y-1.5 w-full">
-                      {eventTypes.map((t: any, i: number) => (
-                        <div key={t.type} className="flex items-center gap-2">
-                          <span
-                            className="w-3 h-3 sm:w-2.5 sm:h-2.5 rounded-sm shrink-0"
-                            style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                          />
-                          <span className="text-sm sm:text-xs text-white/50 flex-1 truncate">
-                            {TYPE_LABELS[t.type] ?? t.type}
-                          </span>
-                          <span className="text-sm sm:text-xs font-mono text-white/30">{t._count ?? t.count ?? 0}</span>
-                        </div>
-                      ))}
+                    {/* Desktop: PieChart from recharts */}
+                    <div className="hidden sm:flex items-center gap-4">
+                      <div className="w-[180px] h-[180px] shrink-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={eventTypeData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={40}
+                              outerRadius={70}
+                              paddingAngle={2}
+                              dataKey="value"
+                            >
+                              {eventTypeData.map((_, i) => (
+                                <Cell key={i} fill={COLORS[i % COLORS.length]} fillOpacity={0.85} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              content={(props: any) => {
+                                if (!props.active || !props.payload?.length) return null;
+                                const d = props.payload[0]?.payload;
+                                if (!d) return null;
+                                const pct = eventTypeTotal > 0
+                                  ? ((d.value / eventTypeTotal) * 100).toFixed(1)
+                                  : "0.0";
+                                return (
+                                  <div className="bg-[#141420] border border-white/10 rounded-xl px-3 py-2 shadow-2xl">
+                                    <p className="text-[10px] text-white/40 mb-1">{d.name}</p>
+                                    <p className="text-xs text-white/70">
+                                      Count:{" "}
+                                      <span className="font-semibold text-white/90">{d.value.toLocaleString()}</span>
+                                    </p>
+                                    <p className="text-xs text-white/40">{pct}% of total</p>
+                                  </div>
+                                );
+                              }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="flex-1 space-y-1.5">
+                        {eventTypeData.map((t, i) => {
+                          const pct = eventTypeTotal > 0
+                            ? ((t.value / eventTypeTotal) * 100).toFixed(1)
+                            : "0.0";
+                          return (
+                            <div key={t.type} className="flex items-center gap-2">
+                              <span
+                                className="w-2.5 h-2.5 rounded-sm shrink-0"
+                                style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                              />
+                              <span className="text-xs text-white/50 flex-1 truncate">{t.name}</span>
+                              <span className="text-xs font-mono text-white/30">{t.value.toLocaleString()}</span>
+                              <span className="text-[10px] text-white/20 w-9 text-right">{pct}%</span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  </>
                 ) : (
                   <p className="text-xs text-white/20 text-center py-6">No event data</p>
                 )}

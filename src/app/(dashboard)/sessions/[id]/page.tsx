@@ -17,6 +17,7 @@ interface SessionEvent {
   inputTokens?: number | null;
   outputTokens?: number | null;
   cacheTokens?: number | null;
+  costUsd?: number | null;
   model?: string | null;
   input?: unknown;
   output?: unknown;
@@ -358,6 +359,11 @@ function EventRow({
             </Link>
           )}
 
+          {/* Cost badge for non-LLM events */}
+          {!isLlm && event.costUsd != null && event.costUsd > 0 && (
+            <span className="text-[10px] text-amber-400/70">💰${event.costUsd.toFixed(4)}</span>
+          )}
+
           {event.durationMs != null && event.durationMs > 0 && (
             <div className="hidden sm:flex items-center gap-2 w-[90px]">
               <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
@@ -388,6 +394,9 @@ function EventRow({
                 <span>↑ {formatTokens(event.outputTokens)} out</span>
                 {(event.cacheTokens ?? 0) > 0 && (
                   <span className="text-amber-300/50">💾 {formatTokens(event.cacheTokens)} cache</span>
+                )}
+                {event.costUsd != null && event.costUsd > 0 && (
+                  <span className="text-amber-400/70">💰${event.costUsd.toFixed(4)}</span>
                 )}
               </div>
             </div>
@@ -696,11 +705,15 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
           <StatPill label="In" value={formatTokens(summary?.totalInputTokens)} color="violet" />
           <StatPill label="Out" value={formatTokens(summary?.totalOutputTokens)} color="green" />
           <StatPill label="Duration" value={formatDuration(session.startedAt, session.lastSeenAt)} color="amber" />
-          <StatPill
-            label="Cost"
-            value={summary?.totalCostUsd != null && summary.totalCostUsd > 0 ? `$${summary.totalCostUsd.toFixed(4)}` : "$0.0000"}
-            color={summary?.totalCostUsd != null && summary.totalCostUsd > 0 ? "green" : "zinc"}
-          />
+          {summary?.totalCostUsd != null && summary.totalCostUsd > 0 ? (
+            <div className="rounded-lg bg-amber-500/[0.06] border border-amber-500/20 px-3 py-2">
+              <div className="text-[10px] text-amber-400/60 uppercase tracking-wider">Cost</div>
+              <div className="text-lg font-bold text-amber-300">${summary.totalCostUsd.toFixed(4)}</div>
+              <div className="text-[10px] text-white/25">${(summary.totalCostUsd / Math.max(1, summary.eventCount)).toFixed(6)}/event</div>
+            </div>
+          ) : (
+            <StatPill label="Cost" value="$0.0000" color="zinc" />
+          )}
         </div>
       </div>
 

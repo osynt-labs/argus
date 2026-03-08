@@ -78,6 +78,8 @@ export function StatsCards({ stats }: { stats: Stats }) {
   const errorRate   = stats.last24h > 0
     ? ((stats.errorsLast24h / stats.last24h) * 100).toFixed(1)
     : "0";
+  const errorRateNum = parseFloat(errorRate);
+  const isHighErrorRate = errorRateNum > 5 && stats.errorsLast24h > 0;
   const eventsPerHour = Math.round(stats.last24h / 24);
   // Use real costUsd if available and non-zero, otherwise fall back to estimated
   const realCost = stats.costUsd24h != null && stats.costUsd24h > 0 ? stats.costUsd24h : null;
@@ -101,14 +103,22 @@ export function StatsCards({ stats }: { stats: Stats }) {
         color="green"
         trend={stats.last1h > eventsPerHour ? "up" : stats.last1h < eventsPerHour ? "down" : "neutral"}
       />
-      <StatCard
-        icon="🔴"
-        label="Errors 24h"
-        value={stats.errorsLast24h}
-        sub={`${errorRate}% error rate`}
-        color="red"
-        trend={stats.errorsLast24h > 0 ? "up" : undefined}
-      />
+      <div className="relative">
+        {isHighErrorRate && (
+          <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+          </span>
+        )}
+        <StatCard
+          icon="🔴"
+          label="Errors 24h"
+          value={stats.errorsLast24h}
+          sub={isHighErrorRate ? `⚠️ ${errorRate}% — HIGH error rate!` : `${errorRate}% error rate`}
+          color="red"
+          trend={stats.errorsLast24h > 0 ? "up" : undefined}
+        />
+      </div>
       <StatCard
         icon="🧠"
         label="Tokens 24h"
