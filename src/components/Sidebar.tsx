@@ -10,7 +10,8 @@ const NAV_ITEMS = [
   { href: "/", label: "Overview", icon: "grid", shortcut: "1" },
   { href: "/events", label: "Events", icon: "activity", shortcut: "2" },
   { href: "/sessions", label: "Sessions", icon: "layers", shortcut: "3" },
-  { href: "/analytics", label: "Analytics", icon: "bar-chart", shortcut: "4" },
+  { href: "/tasks", label: "Tasks", icon: "target", shortcut: "4" },
+  { href: "/analytics", label: "Analytics", icon: "bar-chart", shortcut: "5" },
 ];
 
 function NavIcon({ name, className = "" }: { name: string; className?: string }) {
@@ -40,6 +41,13 @@ function NavIcon({ name, className = "" }: { name: string; className?: string })
         <line x1="18" y1="20" x2="18" y2="10" />
         <line x1="12" y1="20" x2="12" y2="4" />
         <line x1="6" y1="20" x2="6" y2="14" />
+      </svg>
+    ),
+    target: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="6" />
+        <circle cx="12" cy="12" r="2" />
       </svg>
     ),
   };
