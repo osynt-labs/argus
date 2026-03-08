@@ -214,7 +214,7 @@ function TaskCard({ task }: { task: TaskSummary }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap justify-end mb-1">
             <span className="text-[10px] text-white/30 uppercase tracking-wide font-medium">
-              {trigType.replace(/_/g, " ")}
+              {trigType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
             </span>
             {task.errors > 0 && (
               <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-300 border border-red-500/30">
@@ -224,15 +224,19 @@ function TaskCard({ task }: { task: TaskSummary }) {
           </div>
 
           {/* Preview */}
-          {task.triggerPreview && (
-            <div className="text-xs text-white/60 truncate mb-2">
-              {task.triggerPreview}
-            </div>
-          )}
+          {task.triggerPreview && (() => {
+            const preview = task.triggerPreview!
+              .replace(/^\[[\w :,\-.]+UTC\] OpenClaw runtime context[^]*/, "")
+              .replace(/^\[cron:[0-9a-f-]+ ([^\]]+)\]/, "$1")
+              .trim().slice(0, 100);
+            return preview ? (
+              <div className="text-xs text-white/60 truncate mb-2">{preview}</div>
+            ) : null;
+          })()}
 
           {/* Stats row */}
           <div className="flex items-center gap-3 flex-wrap justify-end text-[10px] text-white/30 font-mono">
-            <span>{task.totalEvents} events</span>
+            <span>{task.totalEvents} {task.totalEvents === 1 ? 'event' : 'events'}</span>
             {task.toolCalls > 0 && <span>🔧 {task.toolCalls} tools</span>}
             {task.llmCalls > 0  && <span>✨ {task.llmCalls} llm</span>}
             {task.subAgents > 0 && <span>🤖 {task.subAgents} sub-agents</span>}
