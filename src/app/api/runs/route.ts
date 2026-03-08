@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export type RunStatus = "running" | "done" | "error" | "stale";
-export type RunTrigger = "cron" | "subagent" | "unknown";
+export type RunTrigger = "cron" | "heartbeat" | "subagent" | "unknown";
 
 export interface RunRow {
   id: string;

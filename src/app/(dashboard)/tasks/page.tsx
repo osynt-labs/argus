@@ -50,15 +50,16 @@ interface TaskDetail {
 const TRIGGER_ICONS: Record<string, string> = {
   user_message: "💬",
   cron:         "⏰",
+  heartbeat:    "💓",
   subagent:     "🤖",
   agent:        "🤖",
-  heartbeat:    "💓",
   unknown:      "❓",
 };
 
 const TRIGGER_COLORS: Record<string, string> = {
   user_message: "border-l-sky-500/60 bg-sky-500/[0.04]",
   cron:         "border-l-yellow-500/60 bg-yellow-500/[0.04]",
+  heartbeat:    "border-l-pink-500/60 bg-pink-500/[0.04]",
   subagent:     "border-l-purple-500/60 bg-purple-500/[0.04]",
   agent:        "border-l-purple-500/60 bg-purple-500/[0.04]",
   unknown:      "border-l-white/20",
@@ -293,7 +294,7 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<TaskSummary[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [Filter, setFilter] = useState<"all" | "user_message" | "cron" | "subagent">("all");
+  const [Filter, setFilter] = useState<"all" | "user_message" | "cron" | "heartbeat" | "subagent">("all");
 
   const loadTasks = useCallback(async () => {
     if (loaded) return;
@@ -320,6 +321,7 @@ export default function TasksPage() {
   const counts = tasks ? {
     user_message: tasks.filter((t) => t.triggerType === "user_message").length,
     cron:         tasks.filter((t) => t.triggerType === "cron").length,
+    heartbeat:    tasks.filter((t) => t.triggerType === "heartbeat").length,
     subagent:     tasks.filter((t) => t.triggerType === "subagent" || t.triggerType === "agent").length,
   } : null;
 
@@ -342,9 +344,9 @@ export default function TasksPage() {
         {/* Filter tabs */}
         {counts && (
           <div className="flex gap-1 mt-3 flex-wrap">
-            {(["all", "user_message", "cron", "subagent"] as const).map((f) => {
-              const label = f === "all" ? "All" : f === "user_message" ? "💬 User" : f === "cron" ? "⏰ Cron" : "🤖 Agent";
-              const count = f === "all" ? tasks!.length : f === "subagent" ? counts.subagent : counts[f];
+            {(["all", "user_message", "cron", "heartbeat", "subagent"] as const).map((f) => {
+              const label = f === "all" ? "All" : f === "user_message" ? "💬 User" : f === "cron" ? "⏰ Cron" : f === "heartbeat" ? "💓 Heartbeat" : "🤖 Agent";
+              const count = f === "all" ? tasks!.length : (counts as any)[f] ?? 0;
               return (
                 <button
                   key={f}

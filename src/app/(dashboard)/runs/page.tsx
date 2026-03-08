@@ -76,9 +76,10 @@ function StatusChip({ status }: { status: RunStatus }) {
 // ── Trigger badge ─────────────────────────────────────────────────────────────
 
 const TRIGGER_CONFIG: Record<RunTrigger | "unknown", { icon: string; label: string; color: string }> = {
-  cron:     { icon: "⏰", label: "Cron",      color: "text-yellow-400/70" },
-  subagent: { icon: "🤖", label: "Sub-agent", color: "text-purple-400/70" },
-  unknown:  { icon: "❓", label: "Unknown",   color: "text-white/30" },
+  cron:      { icon: "⏰", label: "Cron",       color: "text-yellow-400/70" },
+  heartbeat: { icon: "💓", label: "Heartbeat",  color: "text-pink-400/70"   },
+  subagent:  { icon: "🤖", label: "Sub-agent",  color: "text-purple-400/70" },
+  unknown:   { icon: "❓", label: "Unknown",    color: "text-white/30"      },
 };
 
 // ── Run Row ───────────────────────────────────────────────────────────────────
@@ -285,7 +286,7 @@ export default function RunsPage() {
         <div className="flex flex-wrap gap-2">
           {/* Trigger */}
           <div className="flex gap-1 rounded-lg bg-white/[0.04] p-0.5">
-            {(["all", "cron", "subagent"] as const).map((t) => (
+            {(["all", "cron", "heartbeat", "subagent"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTriggerFilter(t)}
@@ -297,8 +298,8 @@ export default function RunsPage() {
               >
                 {t === "all"
                   ? `All (${runs.length})`
-                  : t === "cron"
-                  ? `⏰ Cron (${countByTrigger("cron")})`
+                  : t === "cron"        ? `⏰ Cron (${countByTrigger("cron")})`
+                  : t === "heartbeat"   ? `💓 Heartbeat (${countByTrigger("heartbeat")})`
                   : `🤖 Sub-agent (${countByTrigger("subagent")})`}
               </button>
             ))}
