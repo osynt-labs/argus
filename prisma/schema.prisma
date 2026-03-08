@@ -16,7 +16,8 @@ model Session {
   lastSeenAt  DateTime @updatedAt
   totalEvents Int      @default(0)
   totalTokens Int      @default(0)
-  totalErrors Int      @default(0)
+  totalErrors  Int      @default(0)
+  totalCostUsd Float    @default(0)
   metadata    Json?
   events      Event[]
 

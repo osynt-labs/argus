@@ -569,9 +569,17 @@ function EventsPageInner() {
               {filteredEvents.length.toLocaleString()}
             </span>
             {errorCount > 0 && (
-              <span className="text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full tabular-nums">
-                {errorCount}
-              </span>
+              <button
+                onClick={() => setStatusFilter(statusFilter === "error" ? "all" : "error")}
+                title={statusFilter === "error" ? "Clear error filter" : "Show only errors"}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold tabular-nums transition-colors min-h-[44px] sm:min-h-[unset] ${
+                  statusFilter === "error"
+                    ? "bg-red-500/20 text-red-300 border border-red-500/40"
+                    : "bg-red-500/10 text-red-400/80 border border-red-500/20 hover:bg-red-500/15"
+                }`}
+              >
+                {errorCount} {errorCount === 1 ? "err" : "err"}
+              </button>
             )}
             {connState === "connected" && (
               <span className="flex items-center gap-1 text-[10px] text-emerald-400/60">
@@ -679,6 +687,28 @@ function EventsPageInner() {
 
           {/* Filters row - horizontal scroll on mobile */}
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+            {/* Errors quick-filter chip */}
+            {errorCount > 0 && (
+              <button
+                onClick={() => setStatusFilter(statusFilter === "error" ? "all" : "error")}
+                className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2.5 sm:py-2 rounded-xl sm:rounded-lg border text-sm sm:text-xs font-semibold transition-colors min-h-[44px] sm:min-h-0 ${
+                  statusFilter === "error"
+                    ? "bg-red-500/15 text-red-300 border-red-500/30"
+                    : "bg-white/[0.04] text-red-400/70 border-white/[0.06] hover:border-red-500/20 hover:bg-red-500/5"
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                Errors
+                <span
+                  className={`inline-flex items-center justify-center min-w-[18px] h-4 px-1 rounded-full text-[10px] font-bold tabular-nums ${
+                    statusFilter === "error" ? "bg-red-500/30 text-red-200" : "bg-red-500/15 text-red-400"
+                  }`}
+                >
+                  {errorCount}
+                </span>
+              </button>
+            )}
+
             {/* Type filter */}
             <select
               value={typeFilter}

@@ -12,6 +12,7 @@ interface Session {
   lastSeenAt: string;
   totalEvents: number;
   totalErrors: number;
+  totalCostUsd?: number | null;
   _count: { events: number };
 }
 
@@ -100,6 +101,13 @@ export function SessionList({ sessions }: { sessions: Session[] }) {
               <div className="text-right shrink-0 ml-3">
                 <div className="text-xs font-semibold text-white/50">{s._count.events}</div>
                 <div className="text-[10px] text-white/20">events</div>
+                {s.totalCostUsd != null && s.totalCostUsd > 0 && (
+                  <div className="text-[10px] text-amber-400/60 tabular-nums">
+                    ~${s.totalCostUsd < 0.01
+                      ? (s.totalCostUsd * 1000).toFixed(2) + "m"
+                      : s.totalCostUsd.toFixed(3)}
+                  </div>
+                )}
                 <ErrorRateBadge
                   totalErrors={s.totalErrors}
                   totalEvents={s.totalEvents > 0 ? s.totalEvents : s._count.events}

@@ -48,6 +48,14 @@ function mapEventType(type: string): EventType {
 export async function ingestEvent(payload: IngestPayload) {
   const ts = new Date(payload.timestamp);
 
+  // Compute event cost: prefer explicit cost_usd, else estimate from tokens
+  const eventCostUsd =
+    payload.cost_usd ??
+    ((payload.input_tokens ?? 0) * 3.0 +
+      (payload.output_tokens ?? 0) * 15.0 +
+      (payload.cache_tokens ?? 0) * 0.3) /
+      1_000_000;
+
   // Upsert session
   await prisma.session.upsert({
     where: { id: payload.session_id },
@@ -62,6 +70,7 @@ export async function ingestEvent(payload: IngestPayload) {
       totalEvents: 1,
       totalTokens: (payload.output_tokens ?? 0) + (payload.input_tokens ?? 0),
       totalErrors: payload.error || payload.status === "error" ? 1 : 0,
+      totalCostUsd: eventCostUsd,
     },
     update: {
       lastSeenAt: ts,
@@ -72,6 +81,7 @@ export async function ingestEvent(payload: IngestPayload) {
       totalErrors: {
         increment: payload.error || payload.status === "error" ? 1 : 0,
       },
+      totalCostUsd: { increment: eventCostUsd },
     },
   });
 

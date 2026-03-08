@@ -21,7 +21,7 @@ interface TimelineBucket {
 
 interface AnalyticsData {
   toolBreakdown: { toolName: string; count: number; errors?: number; avgDurationMs?: number }[];
-  modelBreakdown: { model: string; _count?: number; count?: number; tokens?: number; inputTokens?: number; outputTokens?: number }[];
+  modelBreakdown: { model: string; _count?: number; count?: number; tokens?: number; inputTokens?: number; outputTokens?: number; cacheTokens?: number }[];
   eventTypeBreakdown: { type: string; _count?: number; count?: number }[];
   errorRate: { total: number; errors: number; rate: number };
   peakHour?: { hour: number; count: number };
@@ -37,6 +37,26 @@ const TYPE_LABELS: Record<string, string> = {
   SESSION_END: "Session Ends",
   MODEL_SWITCH: "Model Switches",
 };
+
+function ModelTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0]?.payload;
+  if (!d) return null;
+  return (
+    <div className="bg-[#141420] border border-white/10 rounded-xl px-3 py-2 shadow-2xl">
+      <p className="text-[10px] text-white/40 mb-1.5">{d.name}</p>
+      <p className="text-xs text-white/60">Calls: <span className="font-semibold text-white/80">{d.count?.toLocaleString()}</span></p>
+      <p className="text-xs text-blue-400">Input: <span className="font-semibold">{d.inputTokens?.toLocaleString()}</span></p>
+      <p className="text-xs text-purple-400">Output: <span className="font-semibold">{d.outputTokens?.toLocaleString()}</span></p>
+      {d.cacheTokens > 0 && (
+        <p className="text-xs text-emerald-400">Cache: <span className="font-semibold">{d.cacheTokens?.toLocaleString()}</span></p>
+      )}
+      <p className="text-xs text-white/30 mt-1 border-t border-white/10 pt-1">
+        Total: <span className="font-semibold">{d.totalTokens?.toLocaleString()} tokens</span>
+      </p>
+    </div>
+  );
+}
 
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
@@ -504,35 +524,57 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Model breakdown */}
-            {analytics?.modelBreakdown && analytics.modelBreakdown.length > 0 && (
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                <h3 className="text-sm font-semibold text-white/50 mb-3">
-                  Model Usage
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {analytics.modelBreakdown.map((m, i) => (
-                    <div
-                      key={m.model}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.04] min-h-[52px]"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm sm:text-xs font-medium text-white/70 truncate">
-                          {m.model?.split("/").pop() ?? "unknown"}
-                        </div>
-                        <div className="text-xs sm:text-[10px] text-white/30">
-                          {m.count ?? m._count ?? 0} calls
-                          {(m.inputTokens != null || m.tokens) ? ` · ${((m.inputTokens != null ? (m.inputTokens ?? 0) + (m.outputTokens ?? 0) : (m.tokens ?? 0)) / 1000).toFixed(1)}k tokens` : ""}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-white/50">Model Usage (24h)</h3>
+                <p className="text-[10px] text-white/25 mt-0.5">token distribution</p>
               </div>
-            )}
+              {isMounted && analytics?.modelBreakdown && analytics.modelBreakdown.length > 0 ? (
+                <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                  <div className="min-w-[280px] sm:min-w-0">
+                    <ResponsiveContainer width="100%" height={160} className="sm:!h-[200px]">
+                      <BarChart
+                        data={analytics.modelBreakdown.map((m, i) => ({
+                          name: m.model?.split("/").pop() ?? "unknown",
+                          totalTokens: (m.inputTokens ?? 0) + (m.outputTokens ?? 0),
+                          inputTokens: m.inputTokens ?? 0,
+                          outputTokens: m.outputTokens ?? 0,
+                          cacheTokens: m.cacheTokens ?? 0,
+                          count: m.count ?? m._count ?? 0,
+                          colorIndex: i,
+                        }))}
+                        layout="vertical"
+                        margin={{ left: 0, right: 16, top: 0, bottom: 0 }}
+                      >
+                        <XAxis
+                          type="number"
+                          tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 10 }}
+                          axisLine={false}
+                          tickLine={false}
+                          tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          width={100}
+                          tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <Tooltip content={<ModelTooltip />} />
+                        <Bar dataKey="totalTokens" name="Tokens" radius={[0, 4, 4, 0]} maxBarSize={24}>
+                          {analytics.modelBreakdown.map((_, i) => (
+                            <Cell key={i} fill={COLORS[i % COLORS.length]} fillOpacity={0.8} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-white/20 text-center py-6">No model data</p>
+              )}
+            </div>
 
             {/* Recent errors */}
             {events.filter((e) => e.status === "error" || e.error).length > 0 && (
