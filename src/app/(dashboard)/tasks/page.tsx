@@ -313,14 +313,14 @@ export default function TasksPage() {
   // Auto-load on mount
   React.useEffect(() => { loadTasks(); }, [loadTasks]);
 
-  const Filtered = tasks?.Filter((t) =>
+  const filtered = tasks?.filter((t) =>
     Filter === "all" ? true : t.triggerType === Filter
   ) ?? [];
 
   const counts = tasks ? {
-    user_message: tasks.Filter((t) => t.triggerType === "user_message").length,
-    cron:         tasks.Filter((t) => t.triggerType === "cron").length,
-    subagent:     tasks.Filter((t) => t.triggerType === "subagent" || t.triggerType === "agent").length,
+    user_message: tasks.filter((t) => t.triggerType === "user_message").length,
+    cron:         tasks.filter((t) => t.triggerType === "cron").length,
+    subagent:     tasks.filter((t) => t.triggerType === "subagent" || t.triggerType === "agent").length,
   } : null;
 
   return (
@@ -371,7 +371,7 @@ export default function TasksPage() {
           </div>
         )}
 
-        {!loading && loaded && Filtered.length === 0 && (
+        {!loading && loaded &&filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center h-40 text-sm text-white/30 gap-2">
             <span className="text-3xl">📭</span>
             <span>No tasks yet</span>
@@ -381,7 +381,7 @@ export default function TasksPage() {
           </div>
         )}
 
-        {Filtered.map((task) => (
+        {filtered.map((task) => (
           <TaskCard key={task.taskId} task={task} />
         ))}
       </div>

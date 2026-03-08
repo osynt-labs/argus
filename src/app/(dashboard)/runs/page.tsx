@@ -231,15 +231,15 @@ export default function RunsPage() {
   }, [fetchRuns]);
 
   // Filter
-  const Filtered = runs.Filter((r) => {
+  const filtered = runs.filter((r) => {
     if (triggerFilter !== "all" && r.triggerType !== triggerFilter) return false;
     if (statusFilter  !== "all" && r.status        !== statusFilter)  return false;
     return true;
   });
 
   // Counts for Filter tabs
-  const countByTrigger = (t: RunTrigger) => runs.Filter((r) => r.triggerType === t).length;
-  const countByStatus  = (s: RunStatus)  => runs.Filter((r) => r.status === s).length;
+  const countByTrigger = (t: RunTrigger) => runs.filter((r) => r.triggerType === t).length;
+  const countByStatus  = (s: RunStatus)  => runs.filter((r) => r.status === s).length;
   const runningCount = countByStatus("running");
 
   return (
@@ -339,7 +339,7 @@ export default function RunsPage() {
           </div>
         )}
 
-        {!loading && Filtered.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center h-40 gap-2 text-white/25">
             <span className="text-3xl">📭</span>
             <span className="text-sm">No runs yet</span>
@@ -350,8 +350,8 @@ export default function RunsPage() {
         )}
 
         {/* Grouped by date */}
-        {!loading && Filtered.length > 0 && (
-          <GroupedRuns runs={Filtered} newIds={newIds} />
+        {!loading && filtered.length > 0 && (
+          <GroupedRuns runs={filtered} newIds={newIds} />
         )}
       </div>
     </div>
