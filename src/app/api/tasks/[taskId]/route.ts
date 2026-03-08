@@ -9,10 +9,10 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { taskId: string } }
+  { params }: { params: Promise<{ taskId: string }> }
 ) {
 
-  const { taskId } = params;
+  const { taskId } = await params;
 
   // All events tagged with this task_id (cast to any since Prisma types may not be regenerated yet)
   const events = await (prisma.event as any).findMany({
