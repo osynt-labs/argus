@@ -586,6 +586,13 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
     return result;
   }, [timelineEvents]);
 
+  // Auto-switch to timeline when there are no turns but there are events
+  useEffect(() => {
+    if (turns.length === 0 && timelineEvents.length > 0) {
+      setViewMode("timeline");
+    }
+  }, [turns.length, timelineEvents.length]);
+
   // Flat filtered events (for timeline view)
   const filteredEvents = useMemo(() => {
     return timelineEvents.filter((event) => {
@@ -707,7 +714,8 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
               viewMode === "turns" ? "bg-white/10 text-white" : "text-white/35 hover:text-white/55"
             }`}
           >
-            💬 Turns
+            💬 Turns{" "}
+            <span className={turns.length === 0 ? "opacity-40" : ""}>({turns.length})</span>
           </button>
           <button
             onClick={() => setViewMode("timeline")}
@@ -761,12 +769,34 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
         {viewMode === "turns" && (
           <div className="px-4 sm:px-6 py-4 space-y-3">
             {turns.length === 0 ? (
-              <div className="flex items-center justify-center h-40">
-                <span className="text-xs text-white/20">
-                  {timelineEvents.length === 0
-                    ? "No events in this session"
-                    : "No MESSAGE_RECEIVED events — switch to Timeline view"}
-                </span>
+              <div className="flex flex-col items-center justify-center h-60 gap-4 text-center py-8">
+                {(() => {
+                  const isCron = id.startsWith("agent:main:cron:");
+                  const isSubagent = id.startsWith("agent:main:subagent:");
+                  const icon = isCron ? "⏰" : "🤖";
+                  const label = isCron ? "Cron Job" : isSubagent ? "Sub-agent Session" : "Agent Session";
+                  return (
+                    <>
+                      <div className="text-4xl leading-none">{icon}</div>
+                      <div>
+                        <p className="text-sm text-white/40">This session has no message turns.</p>
+                        <p className="text-xs text-white/25 mt-1">
+                          {timelineEvents.length === 0
+                            ? "No events have been recorded yet."
+                            : `It's a ${label} — it doesn't receive user messages.`}
+                        </p>
+                      </div>
+                      {timelineEvents.length > 0 && (
+                        <button
+                          onClick={() => setViewMode("timeline")}
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-500/15 border border-blue-500/20 text-blue-300 text-sm hover:bg-blue-500/25 transition-colors min-h-[44px]"
+                        >
+                          📋 View Timeline
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             ) : (
               turns.map((turn, i) => (

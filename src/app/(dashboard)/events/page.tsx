@@ -45,18 +45,34 @@ const TYPE_BORDER: Record<string, string> = {
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  TOOL_CALL: "Tool Call",
-  MESSAGE_SEND: "Message",
-  AGENT_SPAWN: "Agent Spawn",
-  CRON_RUN: "Cron Run",
-  ERROR: "Error",
-  SESSION_START: "Session Start",
-  SESSION_END: "Session End",
-  MODEL_SWITCH: "Model Switch",
-  LLM_OUTPUT:   "LLM Output",
+  // Tool & Compute
+  TOOL_CALL:         "Tool Call",
+  LLM_OUTPUT:        "LLM Output",
+  // Messaging
+  MESSAGE_SEND:      "Message",
+  MESSAGE_SENT:      "Message Sent",
+  MESSAGE_RECEIVED:  "Message Received",
+  // Agents
+  AGENT_START:       "Agent Start",
+  AGENT_END:         "Agent End",
+  AGENT_SPAWN:       "Agent Spawn",
+  SUBAGENT_SPAWNING: "Subagent Spawning",
+  SUBAGENT_ENDED:    "Subagent Ended",
+  // System
+  CRON_RUN:          "Cron Run",
+  SESSION_START:     "Session Start",
+  SESSION_END:       "Session End",
+  MODEL_SWITCH:      "Model Switch",
+  ERROR:             "Error",
 };
 
-const ALL_TYPES = Object.keys(TYPE_LABELS);
+// Grouped for the filter dropdown
+const TYPE_GROUPS: { label: string; types: string[] }[] = [
+  { label: "Tool & Compute", types: ["TOOL_CALL", "LLM_OUTPUT"] },
+  { label: "Messaging",      types: ["MESSAGE_SEND", "MESSAGE_SENT", "MESSAGE_RECEIVED"] },
+  { label: "Agents",         types: ["AGENT_START", "AGENT_END", "AGENT_SPAWN", "SUBAGENT_SPAWNING", "SUBAGENT_ENDED"] },
+  { label: "System",         types: ["CRON_RUN", "SESSION_START", "SESSION_END", "MODEL_SWITCH", "ERROR"] },
+];
 
 // ── Inline JSON viewer ──────────────────────────────────────────────
 function JsonViewer({ data, label }: { data: unknown; label: string }) {
@@ -646,10 +662,14 @@ function EventsPageInner() {
               className="shrink-0 px-3 py-2.5 sm:py-2 rounded-xl sm:rounded-lg bg-white/[0.04] border border-white/[0.06] text-sm sm:text-xs text-white/70 focus:outline-none focus:border-white/15 transition-colors appearance-none cursor-pointer pr-8 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22rgba(255%2C255%2C255%2C0.3)%22%20stroke-width%3D%222%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center]"
             >
               <option value="all">All Types</option>
-              {ALL_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {TYPE_LABELS[t]}
-                </option>
+              {TYPE_GROUPS.map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.types.map((t) => (
+                    <option key={t} value={t}>
+                      {TYPE_LABELS[t]}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
 

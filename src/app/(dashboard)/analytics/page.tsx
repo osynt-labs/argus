@@ -18,7 +18,7 @@ interface TimelineBucket {
 }
 
 interface AnalyticsData {
-  toolBreakdown: { toolName: string; _count: number; errorCount?: number; avgDuration?: number }[];
+  toolBreakdown: { toolName: string; count: number; errors?: number; avgDurationMs?: number }[];
   modelBreakdown: { model: string; _count?: number; count?: number; tokens?: number; inputTokens?: number; outputTokens?: number }[];
   eventTypeBreakdown: { type: string; _count?: number; count?: number }[];
   errorRate: { total: number; errors: number; rate: number };
@@ -38,6 +38,13 @@ const TYPE_LABELS: Record<string, string> = {
 
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
+  const successEntry = payload.find((p: any) => p.name === "Successful");
+  const errorEntry = payload.find((p: any) => p.name === "Errors");
+  const hasToolData = successEntry !== undefined && errorEntry !== undefined;
+  const total = hasToolData ? (successEntry.value ?? 0) + (errorEntry.value ?? 0) : 0;
+  const errorRate = hasToolData && total > 0
+    ? ((errorEntry.value / total) * 100).toFixed(1)
+    : null;
   return (
     <div className="bg-[#141420] border border-white/10 rounded-xl px-3 py-2 shadow-2xl">
       <p className="text-[10px] text-white/40 mb-1">{label}</p>
@@ -46,6 +53,12 @@ function CustomTooltip({ active, payload, label }: any) {
           {p.name}: <span className="font-semibold">{p.value}</span>
         </p>
       ))}
+      {hasToolData && errorRate !== null && (
+        <p className="text-xs text-red-400/80 mt-1 border-t border-white/10 pt-1">
+          Error rate: <span className="font-semibold">{errorRate}%</span>
+          {errorEntry.value > 0 && <span className="text-white/30"> ({errorEntry.value} errors)</span>}
+        </p>
+      )}
     </div>
   );
 }
@@ -117,7 +130,20 @@ export default function AnalyticsPage() {
     (stats?.byType?.map((t: any) => ({ type: t.type, _count: t._count })) ?? []);
 
   const toolBreakdown = analytics?.toolBreakdown ??
-    (stats?.byTool?.map((t) => ({ toolName: t.toolName ?? "unknown", _count: t._count.toolName })) ?? []);
+    (stats?.byTool?.map((t: any) => ({ toolName: t.toolName ?? "unknown", count: t._count ?? 0, errors: 0 })) ?? []);
+
+  const toolData = toolBreakdown.map((t) => ({
+    name: t.toolName ?? "unknown",
+    success: Math.max(0, (t.count ?? 0) - (t.errors ?? 0)),
+    errors: t.errors ?? 0,
+    total: t.count ?? 0,
+    errorRate: t.count ? (((t.errors ?? 0) / t.count) * 100).toFixed(1) : "0.0",
+  }));
+
+  const topErrorRateTools = [...toolData]
+    .filter((t) => t.total > 0 && t.errors > 0)
+    .sort((a, b) => parseFloat(b.errorRate) - parseFloat(a.errorRate))
+    .slice(0, 3);
 
   return (
     <div className="flex flex-col h-full">
@@ -296,39 +322,69 @@ export default function AnalyticsPage() {
                 <h3 className="text-sm font-semibold text-white/50 mb-4">
                   Tool Usage ({timeRange}h)
                 </h3>
-                {isMounted && toolBreakdown.length > 0 ? (
-                  <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-                    <div className="min-w-[300px] sm:min-w-0">
-                      <ResponsiveContainer width="100%" height={Math.max(180, Math.min(toolBreakdown.length * 28, 300))}>
-                        <BarChart
-                          data={toolBreakdown.map((t: any) => ({ name: t.toolName ?? "unknown", count: t._count }))}
-                          layout="vertical"
-                          margin={{ left: 0, right: 16, top: 0, bottom: 0 }}
-                        >
-                          <XAxis
-                            type="number"
-                            tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 10 }}
-                            axisLine={false}
-                            tickLine={false}
-                          />
-                          <YAxis
-                            type="category"
-                            dataKey="name"
-                            width={90}
-                            tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }}
-                            axisLine={false}
-                            tickLine={false}
-                          />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar dataKey="count" name="Calls" radius={[0, 4, 4, 0]}>
-                            {toolBreakdown.map((_: any, i: number) => (
-                              <Cell key={i} fill={COLORS[i % COLORS.length]} fillOpacity={0.7} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+                {isMounted && toolData.length > 0 ? (
+                  <>
+                    <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                      <div className="min-w-[300px] sm:min-w-0">
+                        <ResponsiveContainer width="100%" height={Math.max(180, Math.min(toolData.length * 28, 300))}>
+                          <ComposedChart
+                            data={toolData}
+                            layout="vertical"
+                            margin={{ left: 0, right: 16, top: 0, bottom: 0 }}
+                          >
+                            <XAxis
+                              type="number"
+                              tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 10 }}
+                              axisLine={false}
+                              tickLine={false}
+                            />
+                            <YAxis
+                              type="category"
+                              dataKey="name"
+                              width={90}
+                              tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }}
+                              axisLine={false}
+                              tickLine={false}
+                            />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Bar dataKey="success" name="Successful" stackId="tool" fill="#3b82f6" fillOpacity={0.75} radius={[0, 0, 0, 0]} />
+                            <Bar dataKey="errors" name="Errors" stackId="tool" fill="#ef4444" fillOpacity={0.85} radius={[0, 4, 4, 0]} />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                  </div>
+                    {/* Legend */}
+                    <div className="flex items-center gap-4 mt-2 justify-end">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-2 rounded-sm inline-block bg-blue-500/75" />
+                        <span className="text-[10px] text-white/30">Successful</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-2 rounded-sm inline-block bg-red-500/85" />
+                        <span className="text-[10px] text-white/30">Errors</span>
+                      </div>
+                    </div>
+                    {/* Top error rate tools */}
+                    {topErrorRateTools.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                        <p className="text-[10px] text-white/30 mb-2 font-medium uppercase tracking-wider">Highest Error Rate</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {topErrorRateTools.map((t) => (
+                            <div
+                              key={t.name}
+                              className="flex flex-col gap-0.5 p-2.5 rounded-lg bg-red-500/[0.04] border border-red-500/10 min-h-[52px]"
+                            >
+                              <span className="text-xs font-medium text-white/60 truncate">{t.name}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm font-bold text-red-400">{t.errorRate}%</span>
+                                <span className="text-[10px] text-white/20">({t.errors} errors)</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <p className="text-xs text-white/20 text-center py-6">No tool data</p>
                 )}
