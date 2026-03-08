@@ -171,6 +171,151 @@ function JsonTree({ data, depth = 0 }: { data: unknown; depth?: number }) {
   return <span>{String(data)}</span>;
 }
 
+// ── Inline preview helpers ───────────────────────────────────────────
+function parseJsonVal(val: unknown): unknown {
+  if (val == null) return null;
+  if (typeof val === "object") return val;
+  if (typeof val === "string") {
+    try { return JSON.parse(val); } catch { return val; }
+  }
+  return val;
+}
+
+function strVal(val: unknown): string {
+  if (val == null) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "object") return JSON.stringify(val);
+  return String(val);
+}
+
+function truncStr(str: string, len: number): string {
+  return str.length <= len ? str : str.slice(0, len) + "…";
+}
+
+/** Returns a short preview string for an event, or null if nothing to show. */
+function getEventPreview(ev: DashboardEvent): string | null {
+  const type = ev.type;
+  const toolName = ev.toolName;
+  const input = ev.input;
+  const output = ev.output;
+  const error = ev.error;
+  const meta = ev.metadata as Record<string, unknown> | null | undefined;
+  const ms = (v: unknown): string => v != null ? String(v) : "";
+
+  // TOOL_CALL: 🔧 tool_name(key: "val", …) → output preview
+  if (type === "TOOL_CALL" && toolName) {
+    const parsedInput = parseJsonVal(input);
+    let argPreview = "";
+    if (parsedInput && typeof parsedInput === "object" && !Array.isArray(parsedInput)) {
+      const entries = Object.entries(parsedInput as Record<string, unknown>).slice(0, 3);
+      argPreview = entries.map(([k, v]) => {
+        const vStr = typeof v === "string"
+          ? `"${truncStr(v, 20)}"`
+          : truncStr(strVal(v), 20);
+        return `${k}: ${vStr}`;
+      }).join(", ");
+    } else if (parsedInput != null) {
+      argPreview = truncStr(strVal(parsedInput), 40);
+    }
+    const parsedOutput = parseJsonVal(output);
+    const outStr = parsedOutput != null ? truncStr(strVal(parsedOutput).replace(/\n/g, " "), 80) : "";
+    const inputPart = `🔧 ${toolName}(${argPreview})`;
+    return outStr ? `${inputPart} → ${outStr}` : inputPart;
+  }
+
+  // LLM_OUTPUT / llm_call: beginning of output text
+  if (type === "LLM_OUTPUT" || toolName === "llm_call") {
+    const parsedOutput = parseJsonVal(output);
+    if (parsedOutput != null) {
+      const s = strVal(parsedOutput).replace(/\n/g, " ").trim();
+      if (s) return "✨ " + truncStr(s, 100);
+    }
+    return null;
+  }
+
+  // MESSAGE_RECEIVED: beginning of message
+  if (type === "MESSAGE_RECEIVED") {
+    const preview = meta?.content_preview;
+    if (preview) return "📨 " + truncStr(ms(preview), 100);
+    const parsed = parseJsonVal(input);
+    if (parsed != null) return "📨 " + truncStr(strVal(parsed).replace(/\n/g, " "), 100);
+    return null;
+  }
+
+  // MESSAGE_SENT / MESSAGE_SEND: beginning of response
+  if (type === "MESSAGE_SENT" || type === "MESSAGE_SEND") {
+    const preview = meta?.content_preview;
+    if (preview) return "📤 " + truncStr(ms(preview), 100);
+    const parsed = parseJsonVal(output);
+    if (parsed != null) return "📤 " + truncStr(strVal(parsed).replace(/\n/g, " "), 100);
+    return null;
+  }
+
+  // CRON_RUN: cron trigger + status
+  if (type === "CRON_RUN") {
+    const cronName = ms(meta?.trigger ?? meta?.cron_name ?? "");
+    const status   = ev.status ?? "";
+    if (cronName) return `⏰ ${cronName}${status ? ` · ${status}` : ""}`;
+    return null;
+  }
+
+  // AGENT_SPAWN: label + task preview
+  if (type === "AGENT_SPAWN") {
+    const label = ms(meta?.label ?? "");
+    const task  = ms(meta?.task ?? "");
+    if (label) return `🤖 ${label}${task ? " · " + truncStr(task, 60) : ""}`;
+    if (task)  return `🤖 ${truncStr(task, 80)}`;
+    return null;
+  }
+
+  // ERROR: error message
+  if (type === "ERROR" || error) {
+    const errMsg = error || ms(meta?.error ?? "");
+    if (errMsg) return "🔴 " + truncStr(errMsg, 80);
+    return null;
+  }
+
+  return null;
+}
+
+/** Inline preview chip — mobile shows 60 chars, desktop 120. */
+function EventInlinePreview({ preview }: { preview: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const SHORT_MOBILE  = 60;
+  const SHORT_DESKTOP = 120;
+  const isLongMobile  = preview.length > SHORT_MOBILE;
+  const isLongDesktop = preview.length > SHORT_DESKTOP;
+
+  return (
+    <p className="text-xs text-muted-foreground mt-0.5 font-mono leading-snug break-all">
+      {/* Mobile view */}
+      <span className="sm:hidden">
+        {isLongMobile && !expanded ? truncStr(preview, SHORT_MOBILE) : preview}
+        {isLongMobile && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+            className="ml-1 text-[9px] text-blue-400/60 hover:text-blue-300 transition-colors align-middle"
+          >
+            {expanded ? "▲" : "▼"}
+          </button>
+        )}
+      </span>
+      {/* Desktop view */}
+      <span className="hidden sm:inline">
+        {isLongDesktop && !expanded ? truncStr(preview, SHORT_DESKTOP) : preview}
+        {isLongDesktop && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+            className="ml-1 text-[9px] text-blue-400/60 hover:text-blue-300 transition-colors align-middle"
+          >
+            {expanded ? "▲ less" : "▼ more"}
+          </button>
+        )}
+      </span>
+    </p>
+  );
+}
+
 // ── Copy button ─────────────────────────────────────────────────────
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -374,6 +519,9 @@ function MobileEventCard({
           {/* Status indicator */}
           <span className={`w-2 h-2 rounded-full shrink-0 ${isError ? "bg-red-400" : "bg-emerald-400/70"}`} />
         </div>
+
+        {/* Inline input/output preview */}
+        {(() => { const p = getEventPreview(event); return p ? <EventInlinePreview preview={p} /> : null; })()}
 
         {/* Row 2: Session ID + Timestamp */}
         <div className="flex items-center justify-between gap-2 mb-2 text-[11px]">
@@ -893,6 +1041,8 @@ function EventsPageInner() {
                     ) : (
                       <span className="text-white/25 truncate">{ev.type.toLowerCase().replace(/_/g, " ")}</span>
                     )}
+                    {/* Inline input/output preview */}
+                    {(() => { const p = getEventPreview(ev); return p ? <EventInlinePreview preview={p} /> : null; })()}
                     {ev.error && (
                       <span className="text-[10px] text-red-400/70 truncate mt-0.5">{ev.error}</span>
                     )}
