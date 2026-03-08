@@ -571,7 +571,7 @@ function MobileEventCard({
 
 // ── Main page ───────────────────────────────────────────────────────
 function EventsPageInner() {
-  const { events: sseEvents, connState } = useDashboard();
+  const { events: sseEvents, connState, stats } = useDashboard();
   const searchParams = useSearchParams();
   const sessionFilter = searchParams.get("session") ?? "";
   const timeStartParam = searchParams.get("timeStart");
@@ -706,11 +706,32 @@ function EventsPageInner() {
       {/* ── Page header ──────────────────────────────────────────── */}
       <div className="shrink-0 px-4 sm:px-6 py-4 border-b border-white/[0.06]">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-white">Events</h1>
-            <p className="text-xs text-white/30 mt-0.5 hidden sm:block">
-              Browse and inspect all captured events
-            </p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-lg font-semibold text-white">Events</h1>
+              <p className="text-xs text-white/30 mt-0.5 hidden sm:block">
+                Browse and inspect all captured events
+              </p>
+            </div>
+            {/* Quick errors filter badge — shown when there are errors in the last 24h */}
+            {(stats?.errorsLast24h ?? 0) > 0 && (
+              <button
+                onClick={() => setStatusFilter(statusFilter === "error" ? "all" : "error")}
+                title={statusFilter === "error" ? "Clear error filter" : `Show only errors (${stats!.errorsLast24h} in last 24h)`}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 sm:px-2.5 sm:py-1 rounded-xl sm:rounded-lg border font-semibold text-sm sm:text-xs tabular-nums transition-all min-h-[44px] sm:min-h-0 ${
+                  statusFilter === "error"
+                    ? "bg-red-500/25 text-red-200 border-red-500/50 shadow-[0_0_12px_rgba(239,68,68,0.15)]"
+                    : "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/50"
+                }`}
+              >
+                🔴 <span>{stats!.errorsLast24h.toLocaleString()} {stats!.errorsLast24h === 1 ? "error" : "errors"}</span>
+                {statusFilter === "error" && (
+                  <svg className="w-3 h-3 ml-0.5 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                )}
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-[10px] text-white/20 tabular-nums">
