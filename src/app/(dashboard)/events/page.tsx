@@ -1,10 +1,31 @@
 "use client";
 
-import { useState, useMemo, useCallback, Suspense } from "react";
+import React, { useState, useMemo, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatDistanceToNow, format, subHours } from "date-fns";
 import { useDashboard } from "../layout";
 import type { DashboardEvent } from "../layout";
+
+// ── Tool Analysis types (mirrors LiveFeed) ──────────────────────────
+interface ToolAnalysisMeta {
+  category:    string;
+  subCategory: string;
+  icon:        string;
+  label:       string;
+  details:     Record<string, string>;
+  risk:        "low" | "medium" | "high" | "critical";
+  hasSecrets:  boolean;
+  secrets: Array<{
+    type: string; label: string; field: string; masked: string; severity: string;
+  }>;
+}
+
+const RISK_BADGE: Record<string, string> = {
+  low:      "",
+  medium:   "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
+  high:     "bg-orange-500/20 text-orange-300 border-orange-500/30",
+  critical: "bg-red-500/20   text-red-300    border-red-500/30",
+};
 
 // ── Type badge colours (matches LiveFeed) ───────────────────────────
 const TYPE_BADGE: Record<string, string> = {
@@ -351,6 +372,55 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+// ── Tool Analysis panel ─────────────────────────────────────────────
+function ToolAnalysisPanel({ event }: { event: DashboardEvent }) {
+  if (event.type !== "TOOL_CALL") return null;
+  const a = (event.metadata as Record<string, unknown> | null)?.toolAnalysis as ToolAnalysisMeta | undefined;
+  if (!a) return null;
+  return (
+    <div className="mt-3 p-3 bg-blue-500/5 border border-blue-500/10 rounded-md space-y-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-base">{a.icon}</span>
+        <span className="text-[11px] font-semibold text-blue-200/80">{a.label}</span>
+        <span className="text-[9px] font-mono text-white/25">{a.subCategory}</span>
+        {a.risk !== "low" && RISK_BADGE[a.risk] && (
+          <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${RISK_BADGE[a.risk]}`}>
+            {a.risk}
+          </span>
+        )}
+      </div>
+      {Object.keys(a.details ?? {}).length > 0 && (
+        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[10px] font-mono">
+          {Object.entries(a.details).map(([k, v]) => (
+            <span key={k} className="text-white/30">
+              <span className="text-white/15">{k}: </span>{v}
+            </span>
+          ))}
+        </div>
+      )}
+      {a.secrets && a.secrets.length > 0 && (
+        <div className="p-2 bg-red-600/10 border border-red-500/25 rounded space-y-1.5">
+          <div className="text-[9px] font-bold text-red-300/90 uppercase tracking-widest mb-1">
+            ⚠️ Potential secrets detected
+          </div>
+          {a.secrets.map((s, i) => (
+            <div key={i} className="flex items-center gap-2 text-[10px]">
+              <span className={`px-1.5 py-0.5 rounded border text-[8px] font-bold uppercase ${
+                s.severity === "critical" ? "bg-red-500/20 text-red-300 border-red-500/30" :
+                s.severity === "high"     ? "bg-orange-500/20 text-orange-300 border-orange-500/30" :
+                                            "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
+              }`}>{s.severity}</span>
+              <span className="text-white/60">{s.label}</span>
+              <span className="font-mono text-white/30">{s.masked}</span>
+              <span className="text-white/20">in {s.field}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Event detail panel ──────────────────────────────────────────────
 function EventDetail({ event }: { event: DashboardEvent }) {
   const ts = new Date(event.timestamp);
@@ -398,13 +468,37 @@ function EventDetail({ event }: { event: DashboardEvent }) {
           </div>
         </div>
 
-        {/* Tool name */}
-        {event.toolName && (
-          <div>
-            <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium">Tool</span>
-            <div className="text-xs font-semibold text-white/70 mt-0.5">{event.toolName}</div>
-          </div>
-        )}
+        {/* Tool name / analysis */}
+        {event.toolName && (() => {
+          const analysis = event.type === "TOOL_CALL"
+            ? (event.metadata as Record<string,unknown> | null)?.toolAnalysis as ToolAnalysisMeta | undefined
+            : undefined;
+          const riskBadge = analysis ? RISK_BADGE[analysis.risk] : "";
+          return (
+            <div>
+              <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium">Tool</span>
+              <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                {analysis?.icon && <span className="text-sm">{analysis.icon}</span>}
+                <span className="text-xs font-semibold text-white/80 font-mono">
+                  {analysis?.label ?? event.toolName}
+                </span>
+                {riskBadge && (
+                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${riskBadge}`}>
+                    {analysis!.risk}
+                  </span>
+                )}
+                {analysis?.hasSecrets && (
+                  <span className="px-1.5 py-0.5 rounded text-[8px] font-bold border bg-red-600/25 text-red-300 border-red-500/40 animate-pulse">
+                    🔑 SECRET
+                  </span>
+                )}
+              </div>
+              {analysis?.subCategory && analysis.subCategory !== analysis.category && (
+                <div className="text-[9px] text-white/20 font-mono mt-0.5">{analysis.subCategory}</div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Model */}
         {event.model && (
@@ -473,10 +567,20 @@ function EventDetail({ event }: { event: DashboardEvent }) {
         </div>
       )}
 
-      {/* JSON viewers */}
+      {/* ── Tool Analysis panel ── */}
+      <ToolAnalysisPanel event={event} />
+
       <JsonViewer data={event.input} label="Input" />
       <JsonViewer data={event.output} label="Output" />
-      <JsonViewer data={event.metadata} label="Metadata" />
+      {/* Show metadata (hide toolAnalysis key to avoid duplication) */}
+      {event.metadata != null && (
+        <JsonViewer
+          data={Object.fromEntries(
+            Object.entries(event.metadata as Record<string, unknown>).filter(([k]) => k !== "toolAnalysis")
+          )}
+          label="Metadata"
+        />
+      )}
     </div>
   );
 }
@@ -1056,23 +1160,56 @@ function EventsPageInner() {
                   </div>
 
                   {/* Tool / details */}
-                  <div className="flex flex-col justify-center min-w-0">
-                    {ev.toolName ? (
-                      <span className="font-semibold text-white/70 truncate">{ev.toolName}</span>
-                    ) : (
-                      <span className="text-white/25 truncate">{ev.type.toLowerCase().replace(/_/g, " ")}</span>
-                    )}
-                    {/* Inline input/output preview */}
-                    {(() => { const p = getEventPreview(ev); return p ? <EventInlinePreview preview={p} /> : null; })()}
-                    {ev.error && (
-                      <span className="text-[10px] text-red-400/70 truncate mt-0.5">{ev.error}</span>
-                    )}
-                    {ev.model && !ev.error && (
-                      <span className="text-[10px] text-white/20 font-mono truncate mt-0.5">
-                        {ev.model.split("/").pop()}
-                      </span>
-                    )}
-                  </div>
+                  {(() => {
+                    const analysis = ev.type === "TOOL_CALL"
+                      ? (ev.metadata as Record<string,unknown> | null)?.toolAnalysis as ToolAnalysisMeta | undefined
+                      : undefined;
+                    const riskBadge = analysis ? RISK_BADGE[analysis.risk] : "";
+                    return (
+                      <div className="flex flex-col justify-center min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {/* Icon */}
+                          {analysis?.icon && (
+                            <span className="text-sm shrink-0">{analysis.icon}</span>
+                          )}
+                          {/* Label: analysis label for TOOL_CALL, else toolName */}
+                          {analysis?.label ? (
+                            <span className="font-semibold text-white/85 font-mono truncate text-[11px]">{analysis.label}</span>
+                          ) : ev.toolName ? (
+                            <span className="font-semibold text-white/70 truncate">{ev.toolName}</span>
+                          ) : (
+                            <span className="text-white/25 truncate">{ev.type.toLowerCase().replace(/_/g, " ")}</span>
+                          )}
+                          {/* Risk badge (medium+) */}
+                          {riskBadge && (
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border shrink-0 ${riskBadge}`}>
+                              {analysis!.risk}
+                            </span>
+                          )}
+                          {/* Secret warning */}
+                          {analysis?.hasSecrets && (
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold border bg-red-600/25 text-red-300 border-red-500/40 shrink-0 animate-pulse">
+                              🔑 SECRET
+                            </span>
+                          )}
+                        </div>
+                        {/* Inline preview */}
+                        {(() => { const p = getEventPreview(ev); return p ? <EventInlinePreview preview={p} /> : null; })()}
+                        {ev.error && (
+                          <span className="text-[10px] text-red-400/70 truncate mt-0.5">{ev.error}</span>
+                        )}
+                        {ev.model && !ev.error && (
+                          <span className="text-[10px] text-white/20 font-mono truncate mt-0.5">
+                            {ev.model.split("/").pop()}
+                          </span>
+                        )}
+                        {/* Sub-category hint */}
+                        {analysis && analysis.subCategory !== analysis.category && (
+                          <span className="text-[9px] text-white/20 font-mono truncate mt-0.5">{analysis.subCategory}</span>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Session */}
                   <div className="flex items-center gap-1 min-w-0">
