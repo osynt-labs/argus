@@ -54,6 +54,8 @@ model Event {
   @@index([type])
   @@index([toolName])
   @@index([taskId])
+  @@index([cronJobId])
+  @@index([subAgentId])
   @@map("events")
 }
 
