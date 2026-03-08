@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useDashboard } from "../layout";
 import {
-  AreaChart, Area, BarChart, Bar, ComposedChart, XAxis, YAxis, Tooltip,
+  AreaChart, Area, BarChart, Bar, ComposedChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Cell, PieChart, Pie, CartesianGrid,
 } from "recharts";
 import { format } from "date-fns";
@@ -15,6 +16,7 @@ interface TimelineBucket {
   total: number;
   errors: number;
   tools: number;
+  cost?: number;
 }
 
 interface AnalyticsData {
@@ -45,10 +47,11 @@ function CustomTooltip({ active, payload, label }: any) {
   const errorRate = hasToolData && total > 0
     ? ((errorEntry.value / total) * 100).toFixed(1)
     : null;
+  const costEntry = payload.find((p: any) => p.dataKey === "cost");
   return (
     <div className="bg-[#141420] border border-white/10 rounded-xl px-3 py-2 shadow-2xl">
       <p className="text-[10px] text-white/40 mb-1">{label}</p>
-      {payload.map((p: any, i: number) => (
+      {payload.filter((p: any) => p.dataKey !== "cost").map((p: any, i: number) => (
         <p key={i} className="text-xs" style={{ color: p.color }}>
           {p.name}: <span className="font-semibold">{p.value}</span>
         </p>
@@ -59,12 +62,21 @@ function CustomTooltip({ active, payload, label }: any) {
           {errorEntry.value > 0 && <span className="text-white/30"> ({errorEntry.value} errors)</span>}
         </p>
       )}
+      {errorEntry?.value > 0 && (
+        <p className="text-[9px] text-white/30 mt-1">Click to view error events</p>
+      )}
+      {costEntry != null && (costEntry.value as number) > 0 && (
+        <p className="text-xs text-amber-400/80 mt-1 border-t border-white/10 pt-1">
+          Cost: <span className="font-semibold">${(costEntry.value as number).toFixed(4)}</span>
+        </p>
+      )}
     </div>
   );
 }
 
 export default function AnalyticsPage() {
   const { stats, events } = useDashboard();
+  const router = useRouter();
   const [timeline, setTimeline] = useState<TimelineBucket[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [timeRange, setTimeRange] = useState<"24" | "72" | "168">("24");
@@ -113,6 +125,15 @@ export default function AnalyticsPage() {
     ...b,
     label: format(new Date(b.time), timeRange === "168" ? "EEE HH:mm" : "HH:mm"),
   }));
+
+  const handleTimelineBucketClick = useCallback((data: any) => {
+    if (!data || data.activeTooltipIndex == null) return;
+    const originalBucket = timeline[data.activeTooltipIndex];
+    if (!originalBucket || originalBucket.errors === 0) return;
+    const startMs = new Date(originalBucket.time).getTime();
+    const endMs = startMs + 60 * 60 * 1000; // 1 hour bucket
+    router.push(`/events?timeStart=${startMs}&timeEnd=${endMs}&status=error`);
+  }, [timeline, router]);
 
   // Peak error rate bucket (only where total > 0 and errors > 0)
   const peakErrorBucket = timelineFormatted.reduce<typeof timelineFormatted[0] | null>(
@@ -246,7 +267,7 @@ export default function AnalyticsPage() {
                 <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                   <div className="min-w-[600px] sm:min-w-0">
                     <ResponsiveContainer width="100%" height={180} className="sm:!h-[240px]">
-                      <ComposedChart data={timelineFormatted} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                      <ComposedChart data={timelineFormatted} margin={{ top: 4, right: 4, bottom: 0, left: 0 }} onClick={handleTimelineBucketClick} style={{ cursor: "default" }}>
                         <defs>
                           <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -262,13 +283,24 @@ export default function AnalyticsPage() {
                           interval="preserveStartEnd"
                         />
                         <YAxis
+                          yAxisId="left"
                           tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 10 }}
                           axisLine={false}
                           tickLine={false}
                           width={40}
                         />
+                        <YAxis
+                          yAxisId="cost"
+                          orientation="right"
+                          tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 10 }}
+                          tickFormatter={(v) => v > 0 ? `$${v.toFixed(3)}` : ""}
+                          axisLine={false}
+                          tickLine={false}
+                          width={55}
+                        />
                         <Tooltip content={<CustomTooltip />} />
                         <Area
+                          yAxisId="left"
                           type="monotone"
                           dataKey="total"
                           name="Total"
@@ -277,6 +309,7 @@ export default function AnalyticsPage() {
                           strokeWidth={1.5}
                         />
                         <Area
+                          yAxisId="left"
                           type="monotone"
                           dataKey="tools"
                           name="Tool Calls"
@@ -286,7 +319,7 @@ export default function AnalyticsPage() {
                           strokeDasharray="4 2"
                         />
                         {/* Errors as Bar so we can dynamically colour spike buckets with Cell */}
-                        <Bar dataKey="errors" name="Errors" maxBarSize={16} radius={[2, 2, 0, 0]}>
+                        <Bar yAxisId="left" dataKey="errors" name="Errors" maxBarSize={16} radius={[2, 2, 0, 0]} cursor="pointer">
                           {timelineFormatted.map((bucket, i) => {
                             const isSpike = bucket.total > 0 && bucket.errors / bucket.total > 0.1;
                             return (
@@ -298,6 +331,16 @@ export default function AnalyticsPage() {
                             );
                           })}
                         </Bar>
+                        <Line
+                          yAxisId="cost"
+                          type="monotone"
+                          dataKey="cost"
+                          name="Est. Cost ($)"
+                          stroke="#f59e0b"
+                          strokeWidth={1.5}
+                          strokeDasharray="6 2"
+                          dot={false}
+                        />
                       </ComposedChart>
                     </ResponsiveContainer>
                     {/* Peak error rate summary */}
@@ -308,6 +351,25 @@ export default function AnalyticsPage() {
                         {format(new Date(peakErrorBucket.time), "HH:mm")}
                       </div>
                     )}
+                    {/* Timeline legend */}
+                    <div className="flex items-center gap-4 mt-2 justify-end flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-[2px] rounded-sm inline-block bg-blue-500" />
+                        <span className="text-[10px] text-white/30">Total</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-[2px] rounded-sm inline-block bg-emerald-500" />
+                        <span className="text-[10px] text-white/30">Tool Calls</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-2 rounded-sm inline-block bg-red-500/70" />
+                        <span className="text-[10px] text-white/30">Errors</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-[2px] rounded-sm inline-block" style={{ background: "#f59e0b" }} />
+                        <span className="text-[10px] text-white/30">Est. Cost ($)</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (

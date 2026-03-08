@@ -426,13 +426,19 @@ function EventsPageInner() {
   const { events: sseEvents, connState } = useDashboard();
   const searchParams = useSearchParams();
   const sessionFilter = searchParams.get("session") ?? "";
+  const timeStartParam = searchParams.get("timeStart");
+  const timeEndParam = searchParams.get("timeEnd");
+  const statusParam = searchParams.get("status");
 
   // Filters
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(statusParam ?? "all");
   const [timeFilter, setTimeFilter] = useState("all");
   const [sessionSearch, setSessionSearch] = useState(sessionFilter);
+  const [customTimeRange, setCustomTimeRange] = useState<{ start: number; end: number } | null>(
+    timeStartParam && timeEndParam ? { start: parseInt(timeStartParam), end: parseInt(timeEndParam) } : null
+  );
 
   // Selection
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -464,6 +470,14 @@ function EventsPageInner() {
   // Apply filters
   const filteredEvents = useMemo(() => {
     let result = allEvents;
+
+    // Custom time range filter (from analytics drill-down)
+    if (customTimeRange) {
+      result = result.filter((e) => {
+        const t = new Date(e.timestamp).getTime();
+        return t >= customTimeRange.start && t <= customTimeRange.end;
+      });
+    }
 
     // Time filter
     if (timeFilter !== "all") {
@@ -504,7 +518,7 @@ function EventsPageInner() {
     }
 
     return result;
-  }, [allEvents, search, typeFilter, statusFilter, timeFilter, sessionSearch]);
+  }, [allEvents, search, typeFilter, statusFilter, timeFilter, sessionSearch, customTimeRange]);
 
   // Display first 100 (paginated in UI from the merged set)
   const displayedEvents = filteredEvents.slice(0, 100 + extraEvents.length);
@@ -636,6 +650,16 @@ function EventsPageInner() {
               </button>
             )}
           </div>
+
+          {/* Custom time range filter badge (from analytics drill-down) */}
+          {customTimeRange && (
+            <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[11px] text-red-300/80">
+              <span>⏱ Time range filter active</span>
+              <button onClick={() => setCustomTimeRange(null)} className="text-red-300/50 hover:text-red-300/80 transition-colors">
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          )}
 
           {/* Active session filter badge (shown when coming from URL) */}
           {sessionFilter && sessionSearch === sessionFilter && (
