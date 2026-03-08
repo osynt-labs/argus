@@ -22,6 +22,20 @@ export interface SecretMatch {
   severity: RiskLevel;
 }
 
+/** A single classified sub-command within a compound shell command. */
+export interface CommandEntry {
+  /** The raw command string (trimmed) */
+  raw: string;
+  /** Shell operator that preceded this command: "&&" | "||" | ";" | "|" | "start" */
+  operator: "start" | "&&" | "||" | ";" | "|";
+  category: string;
+  subCategory: string;
+  icon: string;
+  label: string;
+  details: Record<string, string>;
+  risk: RiskLevel;
+}
+
 export interface ToolAnalysis {
   /** Top-level category: git | exec | file | web | k8s | docker | network | ssh | db | package | browser | message | cron | agent | media | other */
   category: string;
@@ -37,6 +51,13 @@ export interface ToolAnalysis {
   risk: RiskLevel;
   /** Detected plaintext secrets (empty when none) */
   secrets: SecretMatch[];
+  /**
+   * For compound commands (&&, ||, ;, |): all sub-commands individually classified.
+   * Single commands → array of one entry.
+   */
+  commands: CommandEntry[];
+  /** True when the original command string contained compound operators */
+  isCompound: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -132,6 +153,136 @@ function scanValue(value: unknown, path: string, out: SecretMatch[]) {
       scanValue(v, path ? `${path}.${k}` : k, out);
     }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Compound command splitter
+// ─────────────────────────────────────────────────────────────────────────────
+
+type ShellOperator = "start" | "&&" | "||" | ";" | "|";
+
+interface RawToken {
+  operator: ShellOperator;
+  cmd: string;
+}
+
+/**
+ * Split a shell command string into individual commands, respecting:
+ *  - Single and double quoted strings (operators inside quotes are ignored)
+ *  - Subshells $(...) and backticks (treated as opaque)
+ *  - Operators: && || ; |  (in that precedence order for detection)
+ *
+ * Returns an array of { operator, cmd } pairs where `operator` is the
+ * shell operator that *preceded* this command ("start" for the first one).
+ */
+export function splitCommands(raw: string): RawToken[] {
+  const tokens: RawToken[] = [];
+  let current = "";
+  let op: ShellOperator = "start";
+  let i = 0;
+  let depth = 0; // track $( ) nesting
+
+  while (i < raw.length) {
+    const ch = raw[i];
+
+    // Skip quoted strings
+    if (ch === '"' || ch === "'") {
+      const quote = ch;
+      current += ch;
+      i++;
+      while (i < raw.length && raw[i] !== quote) {
+        // handle backslash escape inside double quotes
+        if (raw[i] === "\\" && quote === '"') {
+          current += raw[i];
+          i++;
+        }
+        current += raw[i] ?? "";
+        i++;
+      }
+      current += raw[i] ?? ""; // closing quote
+      i++;
+      continue;
+    }
+
+    // Skip backtick subshells
+    if (ch === "`") {
+      current += ch;
+      i++;
+      while (i < raw.length && raw[i] !== "`") {
+        current += raw[i];
+        i++;
+      }
+      current += raw[i] ?? "";
+      i++;
+      continue;
+    }
+
+    // Track $( ) depth
+    if (ch === "$" && raw[i + 1] === "(") {
+      depth++;
+      current += ch;
+      i++;
+      continue;
+    }
+    if (ch === "(" && i > 0 && raw[i - 1] !== "$") {
+      depth++;
+      current += ch;
+      i++;
+      continue;
+    }
+    if (ch === ")" && depth > 0) {
+      depth--;
+      current += ch;
+      i++;
+      continue;
+    }
+
+    // Inside subshell — don't split
+    if (depth > 0) {
+      current += ch;
+      i++;
+      continue;
+    }
+
+    // Check for two-character operators first
+    const two = raw.slice(i, i + 2);
+    if (two === "&&" || two === "||") {
+      const trimmed = current.trim();
+      if (trimmed) tokens.push({ operator: op, cmd: trimmed });
+      op = two as ShellOperator;
+      current = "";
+      i += 2;
+      continue;
+    }
+
+    // Semicolons
+    if (ch === ";") {
+      const trimmed = current.trim();
+      if (trimmed) tokens.push({ operator: op, cmd: trimmed });
+      op = ";";
+      current = "";
+      i++;
+      continue;
+    }
+
+    // Pipe (single |, not ||)
+    if (ch === "|" && raw[i + 1] !== "|") {
+      const trimmed = current.trim();
+      if (trimmed) tokens.push({ operator: op, cmd: trimmed });
+      op = "|";
+      current = "";
+      i++;
+      continue;
+    }
+
+    current += ch;
+    i++;
+  }
+
+  const trimmed = current.trim();
+  if (trimmed) tokens.push({ operator: op, cmd: trimmed });
+
+  return tokens;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -455,10 +606,42 @@ export function analyzeToolCall(
       (input as any)?.command ??
       (typeof input === "string" ? input : "");
 
-    const cls = classifyCommand(cmd);
-    const risk = elevate(cls.risk, maxSecretRisk);
+    // Split compound commands
+    const tokens = splitCommands(cmd);
+    const isCompound = tokens.length > 1;
 
-    return { ...cls, secrets, risk };
+    const commands: CommandEntry[] = tokens.map((t) => {
+      const cls = classifyCommand(t.cmd);
+      return { raw: t.cmd, operator: t.operator, ...cls };
+    });
+
+    // Overall classification = highest-risk non-trivial command
+    // (skip `cd`, `echo`, `sleep` for the "headline")
+    const trivial = new Set(["cd", "echo", "sleep", "true", "false", "pwd"]);
+    const headline =
+      commands.find((c) => !trivial.has(c.raw.split(/\s/)[0])) ??
+      commands[0];
+
+    const maxCmdRisk = commands.reduce<RiskLevel>((acc, c) => {
+      const order: RiskLevel[] = ["low", "medium", "high", "critical"];
+      return order.indexOf(c.risk) > order.indexOf(acc) ? c.risk : acc;
+    }, "low");
+
+    const risk = elevate(maxCmdRisk, maxSecretRisk);
+
+    return {
+      category:    headline?.category    ?? "exec",
+      subCategory: headline?.subCategory ?? "exec",
+      icon:        headline?.icon        ?? "💻",
+      label:       isCompound
+        ? `${commands.length} cmds: ${headline?.label ?? "exec"}`
+        : (headline?.label ?? cmd.split(/\s/)[0]),
+      details:     headline?.details     ?? {},
+      risk,
+      secrets,
+      commands,
+      isCompound,
+    };
   }
 
   // ── Non-exec tools ───────────────────────────────────────────────
@@ -519,6 +702,8 @@ export function analyzeToolCall(
       details,
       secrets,
       risk,
+      commands: [],
+      isCompound: false,
     };
   }
 
@@ -531,6 +716,8 @@ export function analyzeToolCall(
     details: {},
     secrets,
     risk: elevate("low", maxSecretRisk),
+    commands: [],
+    isCompound: false,
   };
 }
 

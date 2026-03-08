@@ -7,6 +7,17 @@ import { useDashboard } from "../layout";
 import type { DashboardEvent } from "../layout";
 
 // ── Tool Analysis types (mirrors LiveFeed) ──────────────────────────
+interface CommandEntry {
+  raw:         string;
+  operator:    "start" | "&&" | "||" | ";" | "|";
+  category:    string;
+  subCategory: string;
+  icon:        string;
+  label:       string;
+  details:     Record<string, string>;
+  risk:        "low" | "medium" | "high" | "critical";
+}
+
 interface ToolAnalysisMeta {
   category:    string;
   subCategory: string;
@@ -15,6 +26,8 @@ interface ToolAnalysisMeta {
   details:     Record<string, string>;
   risk:        "low" | "medium" | "high" | "critical";
   hasSecrets:  boolean;
+  isCompound:  boolean;
+  commands:    CommandEntry[];
   secrets: Array<{
     type: string; label: string; field: string; masked: string; severity: string;
   }>;
@@ -389,12 +402,52 @@ function ToolAnalysisPanel({ event }: { event: DashboardEvent }) {
           </span>
         )}
       </div>
-      {Object.keys(a.details ?? {}).length > 0 && (
+      {/* Details (only for single commands) */}
+      {Object.keys(a.details ?? {}).length > 0 && !a.isCompound && (
         <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[10px] font-mono">
           {Object.entries(a.details).map(([k, v]) => (
             <span key={k} className="text-white/30">
               <span className="text-white/15">{k}: </span>{v}
             </span>
+          ))}
+        </div>
+      )}
+      {/* Compound commands list */}
+      {a.isCompound && a.commands && a.commands.length > 0 && (
+        <div className="space-y-1.5">
+          {a.commands.map((c, i) => (
+            <div key={i} className="flex items-start gap-2 text-[10px]">
+              <span className={`shrink-0 px-1.5 py-0.5 rounded font-mono font-bold text-[9px] border ${
+                c.operator === "start" ? "bg-white/5 text-white/30 border-white/10" :
+                c.operator === "&&"    ? "bg-green-500/15 text-green-300 border-green-500/20" :
+                c.operator === "||"    ? "bg-orange-500/15 text-orange-300 border-orange-500/20" :
+                c.operator === "|"     ? "bg-blue-500/15 text-blue-300 border-blue-500/20" :
+                                         "bg-white/5 text-white/30 border-white/10"
+              }`}>
+                {c.operator === "start" ? `#${i + 1}` : c.operator}
+              </span>
+              <span className="shrink-0 text-sm">{c.icon}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-semibold text-white/80 font-mono">{c.label}</span>
+                  {c.risk !== "low" && (
+                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${
+                      c.risk === "critical" ? "bg-red-500/20 text-red-300 border-red-500/30" :
+                      c.risk === "high"     ? "bg-orange-500/20 text-orange-300 border-orange-500/30" :
+                                              "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
+                    }`}>{c.risk}</span>
+                  )}
+                </div>
+                <div className="text-[9px] text-white/20 font-mono mt-0.5 break-all">{c.raw}</div>
+                {Object.keys(c.details ?? {}).length > 0 && (
+                  <div className="flex flex-wrap gap-x-3 mt-0.5 text-[9px] font-mono text-white/25">
+                    {Object.entries(c.details).map(([k, v]) => (
+                      <span key={k}>{k}: {v}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -1174,7 +1227,14 @@ function EventsPageInner() {
                           )}
                           {/* Label: analysis label for TOOL_CALL, else toolName */}
                           {analysis?.label ? (
-                            <span className="font-semibold text-white/85 font-mono truncate text-[11px]">{analysis.label}</span>
+                            <span className="font-semibold text-white/85 font-mono truncate text-[11px]">
+                              {analysis.label}
+                              {analysis.isCompound && (
+                                <span className="ml-1 text-[9px] text-white/30 font-sans font-normal">
+                                  ({analysis.commands.length})
+                                </span>
+                              )}
+                            </span>
                           ) : ev.toolName ? (
                             <span className="font-semibold text-white/70 truncate">{ev.toolName}</span>
                           ) : (

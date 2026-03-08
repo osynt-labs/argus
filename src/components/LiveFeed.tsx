@@ -4,6 +4,17 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 
+interface CommandEntry {
+  raw:         string;
+  operator:    "start" | "&&" | "||" | ";" | "|";
+  category:    string;
+  subCategory: string;
+  icon:        string;
+  label:       string;
+  details:     Record<string, string>;
+  risk:        "low" | "medium" | "high" | "critical";
+}
+
 interface ToolAnalysisMeta {
   category:    string;
   subCategory: string;
@@ -12,6 +23,8 @@ interface ToolAnalysisMeta {
   details:     Record<string, string>;
   risk:        "low" | "medium" | "high" | "critical";
   hasSecrets:  boolean;
+  isCompound:  boolean;
+  commands:    CommandEntry[];
   secrets: Array<{
     type: string; label: string; field: string; masked: string; severity: string;
   }>;
@@ -466,13 +479,49 @@ function EventDetail({ event }: { event: Event }) {
               )}
             </div>
 
-            {/* Details */}
-            {Object.keys(a.details ?? {}).length > 0 && (
+            {/* Details (headline command) */}
+            {Object.keys(a.details ?? {}).length > 0 && !a.isCompound && (
               <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[10px] font-mono">
                 {Object.entries(a.details).map(([k, v]) => (
                   <span key={k} className="text-white/30">
                     <span className="text-white/15">{k}: </span>{v}
                   </span>
+                ))}
+              </div>
+            )}
+
+            {/* Compound commands list */}
+            {a.isCompound && a.commands && a.commands.length > 0 && (
+              <div className="space-y-1">
+                {a.commands.map((c, i) => (
+                  <div key={i} className="flex items-start gap-2 text-[10px]">
+                    {/* Operator badge */}
+                    <span className={`shrink-0 px-1 py-0.5 rounded font-mono font-bold text-[9px] border ${
+                      c.operator === "start" ? "bg-white/5  text-white/30 border-white/10" :
+                      c.operator === "&&"    ? "bg-green-500/15 text-green-300 border-green-500/20" :
+                      c.operator === "||"    ? "bg-orange-500/15 text-orange-300 border-orange-500/20" :
+                      c.operator === "|"     ? "bg-blue-500/15 text-blue-300 border-blue-500/20" :
+                                               "bg-white/5 text-white/30 border-white/10"
+                    }`}>
+                      {c.operator === "start" ? "#1" : c.operator}
+                    </span>
+                    {/* Icon + label */}
+                    <span className="shrink-0">{c.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-white/75 font-mono">{c.label}</span>
+                        {c.risk !== "low" && (
+                          <span className={`px-1 py-0.5 rounded text-[8px] font-bold uppercase border ${
+                            c.risk === "critical" ? "bg-red-500/20 text-red-300 border-red-500/30" :
+                            c.risk === "high"     ? "bg-orange-500/20 text-orange-300 border-orange-500/30" :
+                                                    "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
+                          }`}>{c.risk}</span>
+                        )}
+                      </div>
+                      {/* Raw command */}
+                      <div className="text-[9px] text-white/20 font-mono truncate mt-0.5">{c.raw}</div>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
