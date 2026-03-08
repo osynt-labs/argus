@@ -6,7 +6,7 @@ import { formatDistanceToNow, intervalToDuration } from "date-fns";
 import { useDashboard, type DashboardSession } from "../layout";
 import { detectSessionType, SESSION_TYPE_CONFIG } from "@/lib/session-types";
 
-type SortKey = "lastActive" | "mostEvents" | "mostErrors";
+type SortKey = "lastActive" | "mostEvents" | "mostErrors" | "mostExpensive";
 
 function formatDuration(startedAt?: string, lastSeenAt?: string): string {
   if (!startedAt || !lastSeenAt) return "--";
@@ -88,6 +88,10 @@ export default function SessionsPage() {
         return copy.sort((a, b) => b.totalEvents - a.totalEvents);
       case "mostErrors":
         return copy.sort((a, b) => b.totalErrors - a.totalErrors);
+      case "mostExpensive":
+        return copy.sort(
+          (a, b) => (b.totalCostUsd ?? 0) - (a.totalCostUsd ?? 0),
+        );
       default:
         return copy;
     }
@@ -128,6 +132,7 @@ export default function SessionsPage() {
     { key: "lastActive", label: "Last active" },
     { key: "mostEvents", label: "Most events" },
     { key: "mostErrors", label: "Most errors" },
+    { key: "mostExpensive", label: "Most expensive" },
   ];
 
   return (
