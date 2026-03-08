@@ -35,27 +35,40 @@ export async function GET(req: NextRequest) {
         timestamp: true,
         type: true,
         status: true,
+        inputTokens: true,
+        outputTokens: true,
+        cacheTokens: true,
       },
       orderBy: { timestamp: "asc" },
     });
 
     const bucketMap = new Map<
       string,
-      { total: number; errors: number; tools: number }
+      { total: number; errors: number; tools: number; cost: number }
     >();
 
     for (const event of events) {
       const key = roundToTimeBucket(event.timestamp, bucket);
-      const entry = bucketMap.get(key) ?? { total: 0, errors: 0, tools: 0 };
+      const entry = bucketMap.get(key) ?? { total: 0, errors: 0, tools: 0, cost: 0 };
       entry.total++;
       if (event.status === "error") entry.errors++;
       if (event.type === "TOOL_CALL") entry.tools++;
+      const inp = event.inputTokens ?? 0;
+      const out = event.outputTokens ?? 0;
+      const cache = event.cacheTokens ?? 0;
+      entry.cost += (inp * 3.0 + out * 15.0 + cache * 0.30) / 1_000_000;
       bucketMap.set(key, entry);
     }
 
     const buckets = Array.from(bucketMap.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([time, counts]) => ({ time, ...counts }));
+      .map(([time, { total, errors, tools, cost }]) => ({
+        time,
+        total,
+        errors,
+        tools,
+        cost: parseFloat(cost.toFixed(4)),
+      }));
 
     return NextResponse.json({ buckets });
   } catch (err) {
