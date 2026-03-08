@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { formatDistanceToNow, format, subHours } from "date-fns";
 import { useDashboard } from "../layout";
 import type { DashboardEvent } from "../layout";
@@ -405,14 +406,17 @@ function MobileEventCard({
 }
 
 // ── Main page ───────────────────────────────────────────────────────
-export default function EventsPage() {
+function EventsPageInner() {
   const { events: sseEvents, connState } = useDashboard();
+  const searchParams = useSearchParams();
+  const sessionFilter = searchParams.get("session") ?? "";
 
   // Filters
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [timeFilter, setTimeFilter] = useState("all");
+  const [sessionSearch, setSessionSearch] = useState(sessionFilter);
 
   // Selection
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -464,6 +468,12 @@ export default function EventsPage() {
       result = result.filter((e) => e.status === "error" || !!e.error);
     }
 
+    // Session filter
+    if (sessionSearch.trim()) {
+      const sq = sessionSearch.toLowerCase();
+      result = result.filter((e) => e.sessionId.toLowerCase().includes(sq));
+    }
+
     // Text search
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -478,7 +488,7 @@ export default function EventsPage() {
     }
 
     return result;
-  }, [allEvents, search, typeFilter, statusFilter, timeFilter]);
+  }, [allEvents, search, typeFilter, statusFilter, timeFilter, sessionSearch]);
 
   // Display first 100 (paginated in UI from the merged set)
   const displayedEvents = filteredEvents.slice(0, 100 + extraEvents.length);
@@ -578,6 +588,55 @@ export default function EventsPage() {
             )}
           </div>
 
+          {/* Session filter */}
+          <div className="relative w-full sm:w-auto sm:min-w-[160px] sm:max-w-[220px]">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-3.5 sm:h-3.5 text-white/20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <rect x="2" y="3" width="6" height="18" rx="1" />
+              <rect x="10" y="3" width="6" height="18" rx="1" />
+              <rect x="18" y="3" width="4" height="18" rx="1" />
+            </svg>
+            <input
+              type="text"
+              value={sessionSearch}
+              onChange={(e) => setSessionSearch(e.target.value)}
+              placeholder="Filter by session..."
+              className="w-full pl-10 sm:pl-9 pr-10 py-3 sm:py-2 rounded-xl sm:rounded-lg bg-white/[0.04] border border-white/[0.06] text-sm sm:text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-white/15 focus:bg-white/[0.06] transition-colors"
+            />
+            {sessionSearch && (
+              <button
+                onClick={() => setSessionSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-auto sm:h-auto flex items-center justify-center text-white/20 hover:text-white/40"
+              >
+                <svg className="w-4 h-4 sm:w-3.5 sm:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Active session filter badge (shown when coming from URL) */}
+          {sessionFilter && sessionSearch === sessionFilter && (
+            <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-300/80">
+              <span>Filtered: {sessionFilter.slice(0, 12)}{sessionFilter.length > 12 ? "…" : ""}</span>
+              <button
+                onClick={() => setSessionSearch("")}
+                className="text-blue-300/50 hover:text-blue-300/80 transition-colors"
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           {/* Filters row - horizontal scroll on mobile */}
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
             {/* Type filter */}
@@ -664,17 +723,18 @@ export default function EventsPage() {
               <polyline points="22,12 18,12 15,21 9,3 6,12 2,12" />
             </svg>
             <p className="text-sm text-white/20 text-center">
-              {search || typeFilter !== "all" || statusFilter !== "all" || timeFilter !== "all"
+              {search || typeFilter !== "all" || statusFilter !== "all" || timeFilter !== "all" || sessionSearch
                 ? "No events match your filters"
                 : "No events yet"}
             </p>
-            {(search || typeFilter !== "all" || statusFilter !== "all" || timeFilter !== "all") && (
+            {(search || typeFilter !== "all" || statusFilter !== "all" || timeFilter !== "all" || sessionSearch) && (
               <button
                 onClick={() => {
                   setSearch("");
                   setTypeFilter("all");
                   setStatusFilter("all");
                   setTimeFilter("all");
+                  setSessionSearch("");
                 }}
                 className="text-sm text-blue-400/60 hover:text-blue-400 transition-colors py-2 px-4 min-h-[44px]"
               >
@@ -851,5 +911,14 @@ export default function EventsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+
+export default function EventsPage() {
+  return (
+    <Suspense>
+      <EventsPageInner />
+    </Suspense>
   );
 }

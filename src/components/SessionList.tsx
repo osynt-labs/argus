@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { detectSessionType, SESSION_TYPE_CONFIG } from "@/lib/session-types";
 
 interface Session {
   id: string;
@@ -35,8 +36,19 @@ export function SessionList({ sessions }: { sessions: Session[] }) {
               className="flex items-center justify-between p-3 rounded-lg bg-white/3 hover:bg-white/[0.07] active:bg-white/[0.06] transition-colors cursor-pointer"
             >
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-mono text-white/70 truncate">
-                  {s.key ?? s.id.slice(0, 14) + "\u2026"}
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-xs font-mono text-white/70 truncate">
+                    {s.key ?? s.id.slice(0, 14) + "\u2026"}
+                  </span>
+                  {(() => {
+                    const cfg = SESSION_TYPE_CONFIG[detectSessionType(s.id)];
+                    return (
+                      <span className={`shrink-0 inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border ${cfg.badgeClass}`}>
+                        <span>{cfg.icon}</span>
+                        <span>{cfg.label}</span>
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className="text-[10px] text-white/25 mt-0.5">
                   {formatDistanceToNow(new Date(s.lastSeenAt), { addSuffix: true })}

@@ -645,7 +645,7 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
 
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-lg font-semibold text-white font-mono">
                 {session.key ?? session.id.slice(0, 20) + "…"}
               </h1>
@@ -654,6 +654,15 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
                   {session.label}
                 </span>
               )}
+              <Link
+                href={`/events?session=${encodeURIComponent(session.id)}`}
+                className="flex items-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-xs text-white/50 hover:text-white/80 hover:bg-white/[0.08] transition-colors min-h-[44px] sm:min-h-0"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="22,12 18,12 15,21 9,3 6,12 2,12" />
+                </svg>
+                View Events
+              </Link>
             </div>
             <div className="flex items-center gap-3 mt-1 text-[11px] text-white/30">
               {session.model && <span className="text-white/40">{session.model.split("/").pop()}</span>}

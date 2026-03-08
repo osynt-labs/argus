@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { formatDistanceToNow, intervalToDuration } from "date-fns";
 import { useDashboard, type DashboardSession } from "../layout";
+import { detectSessionType, SESSION_TYPE_CONFIG } from "@/lib/session-types";
 
 type SortKey = "lastActive" | "mostEvents" | "mostErrors";
 
@@ -300,6 +301,15 @@ function SessionCard({
             <span className="text-base sm:text-sm font-mono font-medium text-white/80 truncate">
               {session.key ?? session.id.slice(0, 14) + "\u2026"}
             </span>
+            {(() => {
+              const cfg = SESSION_TYPE_CONFIG[detectSessionType(session.id)];
+              return (
+                <span className={`shrink-0 inline-flex items-center gap-0.5 text-[11px] sm:text-[10px] px-2 sm:px-1.5 py-1 sm:py-0.5 rounded border ${cfg.badgeClass}`}>
+                  <span>{cfg.icon}</span>
+                  <span>{cfg.label}</span>
+                </span>
+              );
+            })()}
             {session.label && (
               <span className="text-[11px] sm:text-[10px] text-blue-300/60 bg-blue-500/10 border border-blue-500/10 px-2 sm:px-1.5 py-1 sm:py-0.5 rounded shrink-0">
                 {session.label}

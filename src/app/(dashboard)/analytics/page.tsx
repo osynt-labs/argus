@@ -22,6 +22,7 @@ interface AnalyticsData {
   modelBreakdown: { model: string; _count: number; tokens?: number }[];
   eventTypeBreakdown: { type: string; _count: number }[];
   errorRate: { total: number; errors: number; rate: number };
+  peakHour?: { hour: number; count: number };
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -197,13 +198,14 @@ export default function AnalyticsPage() {
                   color="red"
                 />
                 <SummaryCard
-                  label="Event Types"
-                  value={eventTypes.length}
-                  color="purple"
+                  label="Peak Hour"
+                  value={analytics.peakHour && analytics.peakHour.count > 0 ? `${analytics.peakHour.hour}:00` : "—"}
+                  sub={analytics.peakHour && analytics.peakHour.count > 0 ? `${analytics.peakHour.count} events` : "no data"}
+                  color="yellow"
                 />
                 <SummaryCard
-                  label="Active Tools"
-                  value={toolBreakdown.length}
+                  label="Avg Latency"
+                  value={(stats as any)?.tokenStats?._avg?.durationMs ? `${Math.round((stats as any).tokenStats._avg.durationMs)}ms` : "—"}
                   color="green"
                 />
               </div>
@@ -474,6 +476,7 @@ function SummaryCard({
     red:    "border-l-red-500/50    bg-red-500/[0.04]    text-red-300",
     green:  "border-l-green-500/50  bg-green-500/[0.04]  text-green-300",
     purple: "border-l-purple-500/50 bg-purple-500/[0.04] text-purple-300",
+    yellow: "border-l-yellow-500/50 bg-yellow-500/[0.04] text-yellow-300",
   };
   return (
     <div className={`rounded-xl border border-white/[0.06] border-l-2 p-3 ${borderMap[color]}`}>
