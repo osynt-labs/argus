@@ -46,7 +46,7 @@ export default function SessionsPage() {
   const [sortKey, setSortKey] = useState<SortKey>("lastActive");
   const [extraSessions, setExtraSessions] = useState<DashboardSession[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(contextSessions.length >= 10);
 
   // Merge context sessions with any extra loaded via pagination
   const allSessions = useMemo(() => {
@@ -284,6 +284,27 @@ export default function SessionsPage() {
   );
 }
 
+function getErrorRateBadge(
+  totalErrors: number,
+  totalEvents: number,
+): { cls: string; label: string } | null {
+  if (totalEvents === 0 || totalErrors === 0) return null;
+  const rate = (totalErrors / totalEvents) * 100;
+  if (rate > 20) {
+    return {
+      cls: "bg-red-500/20 text-red-400 border border-red-500/30",
+      label: `${Math.round(rate)}% errors`,
+    };
+  }
+  if (rate >= 5) {
+    return {
+      cls: "bg-amber-500/20 text-amber-400 border border-amber-500/30",
+      label: `${Math.round(rate)}% errors`,
+    };
+  }
+  return null;
+}
+
 function SessionCard({
   session,
   maxEvents,
@@ -293,6 +314,7 @@ function SessionCard({
 }) {
   const progressPct = Math.round((session.totalEvents / maxEvents) * 100);
   const isActiveNow = isActiveSession(session.lastSeenAt);
+  const errorBadge = getErrorRateBadge(session.totalErrors, session.totalEvents);
 
   return (
     <Link
@@ -325,6 +347,11 @@ function SessionCard({
             {session.label && (
               <span className="text-[11px] sm:text-[10px] text-blue-300/60 bg-blue-500/10 border border-blue-500/10 px-2 sm:px-1.5 py-1 sm:py-0.5 rounded shrink-0">
                 {session.label}
+              </span>
+            )}
+            {errorBadge && (
+              <span className={`text-[11px] sm:text-[10px] px-2 sm:px-1.5 py-1 sm:py-0.5 rounded shrink-0 font-medium ${errorBadge.cls}`}>
+                {errorBadge.label}
               </span>
             )}
             {isActiveNow && (

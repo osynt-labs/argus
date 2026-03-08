@@ -40,6 +40,24 @@ const TYPE_LABELS: Record<string, string> = {
   MODEL_SWITCH: "Model Switches",
 };
 
+function CostTrendTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  const costEntry = payload.find((p: any) => p.dataKey === "cost");
+  const cost = costEntry?.value as number | undefined;
+  return (
+    <div className="bg-[#141420] border border-white/10 rounded-xl px-3 py-2 shadow-2xl">
+      <p className="text-[10px] text-white/40 mb-1">{label}</p>
+      {cost != null && cost > 0 ? (
+        <p className="text-xs text-amber-400">
+          Cost: <span className="font-semibold">${cost.toFixed(4)}</span>
+        </p>
+      ) : (
+        <p className="text-xs text-white/20">No cost data</p>
+      )}
+    </div>
+  );
+}
+
 function ModelTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload;
@@ -307,6 +325,63 @@ export default function AnalyticsPage() {
                   sub="avg tool call"
                   color="green"
                 />
+              </div>
+            )}
+
+            {/* Cost Trend Chart */}
+            {isMounted && timelineFormatted.some((b) => (b.cost ?? 0) > 0) && (
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.02] p-4">
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-amber-400/80">Cost Trend</h3>
+                    <p className="text-[10px] text-white/25 mt-0.5">estimated spend over time</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <span className="text-lg font-bold text-amber-400 tabular-nums">
+                      ${timelineFormatted.reduce((sum, b) => sum + (b.cost ?? 0), 0).toFixed(2)}
+                    </span>
+                    <p className="text-[10px] text-white/25">{timeRange}h total</p>
+                  </div>
+                </div>
+                <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                  <div className="min-w-[500px] sm:min-w-0">
+                    <ResponsiveContainer width="100%" height={120} className="sm:!h-[180px]">
+                      <AreaChart data={timelineFormatted} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                        <defs>
+                          <linearGradient id="gradCost" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.4} />
+                            <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 10 }}
+                          axisLine={false}
+                          tickLine={false}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis
+                          tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 10 }}
+                          axisLine={false}
+                          tickLine={false}
+                          width={52}
+                          tickFormatter={(v: number) => `$${v.toFixed(3)}`}
+                        />
+                        <Tooltip content={<CostTrendTooltip />} />
+                        <Area
+                          type="monotone"
+                          dataKey="cost"
+                          stroke="#f59e0b"
+                          fill="url(#gradCost)"
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 4, fill: "#f59e0b", strokeWidth: 0 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               </div>
             )}
 
